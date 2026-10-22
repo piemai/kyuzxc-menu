@@ -1,4 +1,4 @@
---// Kyuzxc Simple Mod Menu (Upgraded 3-Category Edition + Fixed Teleport & Dropdown List)
+--// Kyuzxc Simple Mod Menu (iPad Edition + Mobile Aim Toggle & Smoothness Selector)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -15,6 +15,9 @@ if uiParent:FindFirstChild("KyuzxcModMenu") then
 end
 if uiParent:FindFirstChild("KyuzxcVisualsGui") then
     uiParent.KyuzxcVisualsGui:Destroy()
+end
+if uiParent:FindFirstChild("KyuzxcMobileAimBtn") then
+    uiParent.KyuzxcMobileAimBtn:Destroy()
 end
 
 --// Notification Helper
@@ -44,13 +47,63 @@ local customWalkSpeed = 50
 local flyenabled = false
 local godmodeenabled = false
 local fovcircleenabled = false
-local fovradius = 100
+local fovradius = 120
+local aimbotenabled = false
+local aimbotactive = false -- Mobile floating toggle state
+local targetPartOption = "Head" -- Options: "Head", "UpperTorso", "HumanoidRootPart"
+local aimbotSmoothing = 0.3 -- Default Medium (0 = Hard/Instant, Higher = Low/Smooth)
 local selectedTargetPlayer = nil
 
 --// ESP Colors & Theme
 local teamColor = Color3.fromRGB(0, 255, 120)  -- Green (Team)
 local enemyColor = Color3.fromRGB(255, 75, 75) -- Red (Enemy)
 local accentColor = Color3.fromRGB(0, 255, 128)
+
+--// Floating Mobile Aimbot Toggle Button
+local mobileGui = Instance.new("ScreenGui")
+mobileGui.Name = "KyuzxcMobileAimBtn"
+mobileGui.ResetOnSpawn = false
+mobileGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+mobileGui.Parent = uiParent
+
+local aimToggleButton = Instance.new("TextButton")
+aimToggleButton.Size = UDim2.new(0, 75, 0, 75)
+aimToggleButton.Position = UDim2.new(0.85, 0, 0.65, 0)
+aimToggleButton.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+aimToggleButton.TextColor3 = Color3.fromRGB(255, 75, 75)
+aimToggleButton.Text = "AIM: OFF"
+aimToggleButton.Font = Enum.Font.GothamBold
+aimToggleButton.TextSize = 11
+aimToggleButton.Active = true
+aimToggleButton.Draggable = true
+aimToggleButton.Visible = false
+aimToggleButton.Parent = mobileGui
+
+local aimBtnCorner = Instance.new("UICorner")
+aimBtnCorner.CornerRadius = UDim.new(1, 0)
+aimBtnCorner.Parent = aimToggleButton
+
+local aimBtnStroke = Instance.new("UIStroke")
+aimBtnStroke.Color = Color3.fromRGB(255, 75, 75)
+aimBtnStroke.Thickness = 2
+aimBtnStroke.Parent = aimToggleButton
+
+aimToggleButton.MouseButton1Click:Connect(function()
+    aimbotactive = not aimbotactive
+    if aimbotactive then
+        aimToggleButton.BackgroundColor3 = Color3.fromRGB(0, 180, 90)
+        aimToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        aimBtnStroke.Color = Color3.fromRGB(0, 255, 128)
+        aimToggleButton.Text = "AIM: ON"
+        notify("Mobile Aimbot Enabled")
+    else
+        aimToggleButton.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+        aimToggleButton.TextColor3 = Color3.fromRGB(255, 75, 75)
+        aimBtnStroke.Color = Color3.fromRGB(255, 75, 75)
+        aimToggleButton.Text = "AIM: OFF"
+        notify("Mobile Aimbot Disabled")
+    end
+end)
 
 --// Teleport Logic
 local function teleportToTarget()
@@ -92,7 +145,9 @@ function Library:CreateWindow(title)
                 IsButton = config and config.isButton or false,
                 IsScrollingDropdown = config and config.isScrollingDropdown or false,
                 IsSpeedInput = config and config.isSpeedInput or false,
-                IsFovInput = config and config.isFovInput or false
+                IsFovInput = config and config.isFovInput or false,
+                IsPartDropdown = config and config.isPartDropdown or false,
+                IsSmoothDropdown = config and config.isSmoothDropdown or false
             })
         end
         
@@ -160,6 +215,9 @@ function Library:Load()
             screenGui:Destroy()
             if uiParent:FindFirstChild("KyuzxcVisualsGui") then
                 uiParent.KyuzxcVisualsGui:Destroy()
+            end
+            if uiParent:FindFirstChild("KyuzxcMobileAimBtn") then
+                uiParent.KyuzxcMobileAimBtn:Destroy()
             end
             notify("Menu closed and unloaded.")
         end)
@@ -284,6 +342,106 @@ function Library:Load()
                             textBox.Text = tab.IsSpeedInput and tostring(customWalkSpeed) or tostring(fovradius)
                         end
                     end)
+                elseif tab.IsPartDropdown then
+                    togButton.BackgroundColor3 = Color3.fromRGB(0, 150, 150)
+                    togButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+                    togButton.Text = "Aim Part: " .. targetPartOption .. " ▼"
+                    
+                    local partFrame = Instance.new("Frame")
+                    partFrame.LayoutOrder = (idx * 2) + 1
+                    partFrame.Size = UDim2.new(1, 0, 0, 96)
+                    partFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
+                    partFrame.BorderSizePixel = 0
+                    partFrame.Visible = false
+                    partFrame.Parent = itemHolder
+                    
+                    local partCorner = Instance.new("UICorner")
+                    partCorner.CornerRadius = UDim.new(0, 6)
+                    partCorner.Parent = partFrame
+
+                    local partLayout = Instance.new("UIListLayout")
+                    partLayout.SortOrder = Enum.SortOrder.LayoutOrder
+                    partLayout.Padding = UDim.new(0, 4)
+                    partLayout.Parent = partFrame
+
+                    local parts = {"Head", "UpperTorso", "HumanoidRootPart"}
+                    for _, ptName in ipairs(parts) do
+                        local pBtn = Instance.new("TextButton")
+                        pBtn.Size = UDim2.new(1, 0, 0, 28)
+                        pBtn.BackgroundColor3 = (targetPartOption == ptName) and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(32, 32, 45)
+                        pBtn.TextColor3 = Color3.fromRGB(235, 235, 235)
+                        pBtn.Text = "Target: " .. ptName
+                        pBtn.Font = Enum.Font.GothamBold
+                        pBtn.TextSize = 11
+                        pBtn.Parent = partFrame
+                        
+                        local pCorner = Instance.new("UICorner")
+                        pCorner.CornerRadius = UDim.new(0, 4)
+                        pCorner.Parent = pBtn
+                        
+                        pBtn.MouseButton1Click:Connect(function()
+                            targetPartOption = ptName
+                            togButton.Text = "Aim Part: " .. ptName .. " ▼"
+                            notify("Aimbot Part set to: " .. ptName)
+                            partFrame.Visible = false
+                        end)
+                    end
+
+                    togButton.MouseButton1Click:Connect(function()
+                        partFrame.Visible = not partFrame.Visible
+                    end)
+                elseif tab.IsSmoothDropdown then
+                    togButton.BackgroundColor3 = Color3.fromRGB(200, 120, 0)
+                    togButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+                    togButton.Text = "Aim Mode: Medium ▼"
+                    
+                    local smoothFrame = Instance.new("Frame")
+                    smoothFrame.LayoutOrder = (idx * 2) + 1
+                    smoothFrame.Size = UDim2.new(1, 0, 0, 128)
+                    smoothFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
+                    smoothFrame.BorderSizePixel = 0
+                    smoothFrame.Visible = false
+                    smoothFrame.Parent = itemHolder
+                    
+                    local smoothCorner = Instance.new("UICorner")
+                    smoothCorner.CornerRadius = UDim.new(0, 6)
+                    smoothCorner.Parent = smoothFrame
+
+                    local smoothLayout = Instance.new("UIListLayout")
+                    smoothLayout.SortOrder = Enum.SortOrder.LayoutOrder
+                    smoothLayout.Padding = UDim.new(0, 4)
+                    smoothLayout.Parent = smoothFrame
+
+                    local modes = {
+                        {Name = "Hard (Instant)", Val = 0},
+                        {Name = "Medium (Balanced)", Val = 0.3},
+                        {Name = "Low (Smooth)", Val = 0.6}
+                    }
+                    for _, mode in ipairs(modes) do
+                        local mBtn = Instance.new("TextButton")
+                        mBtn.Size = UDim2.new(1, 0, 0, 28)
+                        mBtn.BackgroundColor3 = (aimbotSmoothing == mode.Val) and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(32, 32, 45)
+                        mBtn.TextColor3 = Color3.fromRGB(235, 235, 235)
+                        mBtn.Text = mode.Name
+                        mBtn.Font = Enum.Font.GothamBold
+                        mBtn.TextSize = 11
+                        mBtn.Parent = smoothFrame
+                        
+                        local mCorner = Instance.new("UICorner")
+                        mCorner.CornerRadius = UDim.new(0, 4)
+                        mCorner.Parent = mBtn
+                        
+                        mBtn.MouseButton1Click:Connect(function()
+                            aimbotSmoothing = mode.Val
+                            togButton.Text = "Aim Mode: " .. mode.Name .. " ▼"
+                            notify("Aimbot Mode: " .. mode.Name)
+                            smoothFrame.Visible = false
+                        end)
+                    end
+
+                    togButton.MouseButton1Click:Connect(function()
+                        smoothFrame.Visible = not smoothFrame.Visible
+                    end)
                 elseif tab.IsScrollingDropdown then
                     togButton.BackgroundColor3 = Color3.fromRGB(110, 40, 200)
                     togButton.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -383,7 +541,7 @@ function Library:Load()
                     togButton.TextXAlignment = Enum.TextXAlignment.Left
                 end
                 
-                if not tab.IsSpeedInput and not tab.IsFovInput and not tab.IsScrollingDropdown and not tab.IsButton then
+                if not tab.IsSpeedInput and not tab.IsFovInput and not tab.IsScrollingDropdown and not tab.IsPartDropdown and not tab.IsSmoothDropdown and not tab.IsButton then
                     local pad = Instance.new("UIPadding")
                     pad.PaddingLeft = UDim.new(0, 6)
                     pad.Parent = togButton
@@ -400,7 +558,7 @@ function Library:Load()
                 corner.Parent = togButton
                 
                 local currentState = tab.State
-                if not tab.IsButton and not tab.IsScrollingDropdown and not tab.IsSpeedInput and not tab.IsFovInput then
+                if not tab.IsButton and not tab.IsScrollingDropdown and not tab.IsPartDropdown and not tab.IsSmoothDropdown and not tab.IsSpeedInput and not tab.IsFovInput then
                     togButton.MouseButton1Click:Connect(function()
                         currentState = not currentState
                         togButton.Text = "  " .. tab.Name .. " : " .. (currentState and "ON" or "OFF")
@@ -449,7 +607,7 @@ function Library:Load()
     end
 end
 
-local Window = Library:CreateWindow("kyuzxc simple mod menu [upgraded]")
+local Window = Library:CreateWindow("kyuzxc simple mod menu [ipad]")
 
 --// Category 1: Movement
 local catMovement = Window:CreateCategory("Movement")
@@ -467,7 +625,7 @@ catMovement:CreateTab("speed value", {isSpeedInput = true})
 catMovement:CreateTab("fly", {enabled = false}, function(tog) flyenabled = tog end)
 catMovement:CreateTab("god mode", {enabled = false}, function(tog) godmodeenabled = tog end)
 
---// Category 2: Visuals
+--// Category 2: Visuals & Combat
 local catVisuals = Window:CreateCategory("Visuals")
 catVisuals:CreateTab("esp team (green)", {enabled = true}, function(tog) showteam = tog end)
 catVisuals:CreateTab("esp enemy (red)", {enabled = true}, function(tog) showenemy = tog end)
@@ -476,6 +634,19 @@ catVisuals:CreateTab("esp boxes", {enabled = true}, function(tog) boxenabled = t
 catVisuals:CreateTab("esp skeleton", {enabled = true}, function(tog) skeletonenabled = tog end)
 catVisuals:CreateTab("esp tracers", {enabled = true}, function(tog) tracerenabled = tog end)
 catVisuals:CreateTab("distance tags", {enabled = true}, function(tog) showdist = tog end)
+catVisuals:CreateTab("aimbot button", {enabled = false}, function(tog) 
+    aimbotenabled = tog 
+    aimToggleButton.Visible = tog
+    if not tog then
+        aimbotactive = false
+        aimToggleButton.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+        aimToggleButton.TextColor3 = Color3.fromRGB(255, 75, 75)
+        aimBtnStroke.Color = Color3.fromRGB(255, 75, 75)
+        aimToggleButton.Text = "AIM: OFF"
+    end
+end)
+catVisuals:CreateTab("aim part", {isPartDropdown = true})
+catVisuals:CreateTab("aim smoothness", {isSmoothDropdown = true})
 catVisuals:CreateTab("fov circle", {enabled = false}, function(tog) fovcircleenabled = tog end)
 catVisuals:CreateTab("fov value", {isFovInput = true})
 
@@ -535,7 +706,7 @@ RunService.Stepped:Connect(function()
     end
 end)
 
---// Visuals: FOV Circle & ESP Drawing
+--// Visuals: Round FOV Circle & Mobile Aimbot & ESP Drawing
 local visualGui = Instance.new("ScreenGui")
 visualGui.Name = "KyuzxcVisualsGui"
 visualGui.ResetOnSpawn = false
@@ -553,6 +724,43 @@ local fovStroke = Instance.new("UIStroke")
 fovStroke.Color = Color3.fromRGB(255, 255, 255)
 fovStroke.Thickness = 1.5
 fovStroke.Parent = fovCircle
+
+local fovCorner = Instance.new("UICorner")
+fovCorner.CornerRadius = UDim.new(1, 0)
+fovCorner.Parent = fovCircle
+
+local fovAspect = Instance.new("UIAspectRatioConstraint")
+fovAspect.AspectRatio = 1
+fovAspect.Parent = fovCircle
+
+--// Aimbot Target Finder with Configurable Part
+local function getClosestPlayerInFOV()
+    local closestTarget = nil
+    local shortestDist = fovradius
+    local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= player then
+            local isTeammate = (p.Team ~= nil and player.Team ~= nil and not p.Neutral and not player.Neutral and p.Team == player.Team)
+            if not isTeammate then
+                local char = p.Character
+                local targetPart = char and char:FindFirstChild(targetPartOption)
+                local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+                if targetPart and humanoid and humanoid.Health > 0 then
+                    local screenPos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
+                    if onScreen then
+                        local screenDist = (Vector2.new(screenPos.X, screenPos.Y) - screenCenter).Magnitude
+                        if screenDist < shortestDist then
+                            shortestDist = screenDist
+                            closestTarget = targetPart
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return closestTarget
+end
 
 local espCache = {}
 
@@ -794,6 +1002,18 @@ RunService.RenderStepped:Connect(function()
     if fovcircleenabled then
         fovCircle.Size = UDim2.new(0, fovradius * 2, 0, fovradius * 2)
         fovCircle.Position = UDim2.new(0, Camera.ViewportSize.X / 2, 0, Camera.ViewportSize.Y / 2)
+    end
+
+    if aimbotenabled and aimbotactive then
+        local targetPart = getClosestPlayerInFOV()
+        if targetPart then
+            local targetCFrame = CFrame.new(Camera.CFrame.Position, targetPart.Position)
+            if aimbotSmoothing == 0 then
+                Camera.CFrame = targetCFrame
+            else
+                Camera.CFrame = Camera.CFrame:Lerp(targetCFrame, 1 - aimbotSmoothing)
+            end
+        end
     end
 
     for _, p in ipairs(Players:GetPlayers()) do
