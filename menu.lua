@@ -1,4 +1,4 @@
---// Kyuzxc Simple Mod Menu (iPad Edition + Fixed Aimbot Logic)
+--// Kyuzxc Simple Mod Menu (iPad Edition + Draggable Center Aimbot Button)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -59,7 +59,7 @@ local teamColor = Color3.fromRGB(0, 255, 120)  -- Green (Team)
 local enemyColor = Color3.fromRGB(255, 75, 75) -- Red (Enemy)
 local accentColor = Color3.fromRGB(0, 255, 128)
 
---// Floating Mobile Aimbot Toggle Button
+--// Floating Draggable Mobile Aimbot Toggle Button (Center Default)
 local mobileGui = Instance.new("ScreenGui")
 mobileGui.Name = "KyuzxcMobileAimBtn"
 mobileGui.ResetOnSpawn = false
@@ -68,14 +68,14 @@ mobileGui.Parent = uiParent
 
 local aimToggleButton = Instance.new("TextButton")
 aimToggleButton.Size = UDim2.new(0, 75, 0, 75)
-aimToggleButton.Position = UDim2.new(0.85, 0, 0.65, 0)
+aimToggleButton.AnchorPoint = Vector2.new(0.5, 0.5)
+aimToggleButton.Position = UDim2.new(0.5, 0, 0.85, 0) -- Nakalagay sa gitna malapit sa ibaba para madaling ma-reach
 aimToggleButton.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
 aimToggleButton.TextColor3 = Color3.fromRGB(255, 75, 75)
 aimToggleButton.Text = "AIM: OFF"
 aimToggleButton.Font = Enum.Font.GothamBold
 aimToggleButton.TextSize = 11
 aimToggleButton.Active = true
-aimToggleButton.Draggable = true
 aimToggleButton.Visible = false
 aimToggleButton.Parent = mobileGui
 
@@ -88,20 +88,57 @@ aimBtnStroke.Color = Color3.fromRGB(255, 75, 75)
 aimBtnStroke.Thickness = 2
 aimBtnStroke.Parent = aimToggleButton
 
-aimToggleButton.MouseButton1Click:Connect(function()
-    aimbotactive = not aimbotactive
-    if aimbotactive then
-        aimToggleButton.BackgroundColor3 = Color3.fromRGB(0, 180, 90)
-        aimToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-        aimBtnStroke.Color = Color3.fromRGB(0, 255, 128)
-        aimToggleButton.Text = "AIM: ON"
-        notify("Mobile Aimbot Enabled")
-    else
-        aimToggleButton.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
-        aimToggleButton.TextColor3 = Color3.fromRGB(255, 75, 75)
-        aimBtnStroke.Color = Color3.fromRGB(255, 75, 75)
-        aimToggleButton.Text = "AIM: OFF"
-        notify("Mobile Aimbot Disabled")
+--// Custom Smooth Draggable Logic for Touch/Mouse
+local dragging, dragInput, dragStart, startPos
+
+aimToggleButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = aimToggleButton.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        aimToggleButton.Position = UDim2.new(
+            startPos.X.Scale, 
+            startPos.X.Offset + delta.X, 
+            startPos.Y.Scale, 
+            startPos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+-- Tap/Click toggle logic (differentiate between drag and click)
+local clickTimer = 0
+aimToggleButton.MouseButton1Down:Connect(function()
+    clickTimer = tick()
+end)
+
+aimToggleButton.MouseButton1Up:Connect(function()
+    if tick() - clickTimer < 0.2 then -- Kung mabilis na tap/click, i-toggle ang aimbot
+        aimbotactive = not aimbotactive
+        if aimbotactive then
+            aimToggleButton.BackgroundColor3 = Color3.fromRGB(0, 180, 90)
+            aimToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+            aimBtnStroke.Color = Color3.fromRGB(0, 255, 128)
+            aimToggleButton.Text = "AIM: ON"
+            notify("Mobile Aimbot Enabled")
+        else
+            aimToggleButton.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+            aimToggleButton.TextColor3 = Color3.fromRGB(255, 75, 75)
+            aimBtnStroke.Color = Color3.fromRGB(255, 75, 75)
+            aimToggleButton.Text = "AIM: OFF"
+            notify("Mobile Aimbot Disabled")
+        end
     end
 end)
 
@@ -740,7 +777,7 @@ local function isPlayerTeammate(p)
     return false
 end
 
---// Fixed Aimbot Target Finder Logic
+--// Aimbot Target Finder Logic
 local function getClosestPlayerInFOV()
     local closestTarget = nil
     local shortestDist = fovradius
