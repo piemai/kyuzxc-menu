@@ -1,4 +1,4 @@
---// Kyuzxc Simple Mod Menu (Upgraded 3-Category Edition + Fixed Teleport List)
+--// Kyuzxc Simple Mod Menu (Upgraded 3-Category Edition + Theme & FOV)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -9,7 +9,7 @@ local Camera = workspace.CurrentCamera
 local player = Players.LocalPlayer
 local uiParent = (gethui and gethui()) or CoreGui
 
--- Linisin ang lumang UI kung naka-load na
+-- Clean up old UI instances
 if uiParent:FindFirstChild("KyuzxcModMenu") then
     uiParent.KyuzxcModMenu:Destroy()
 end
@@ -43,11 +43,14 @@ local speedenabled = false
 local customWalkSpeed = 50
 local flyenabled = false
 local godmodeenabled = false
+local fovcircleenabled = false
+local fovradius = 100
 local selectedTargetPlayer = nil
 
---// ESP Colors
+--// ESP Colors & Theme
 local teamColor = Color3.fromRGB(0, 255, 120)  -- Green (Team)
 local enemyColor = Color3.fromRGB(255, 75, 75) -- Red (Enemy)
+local accentColor = Color3.fromRGB(0, 255, 128)
 
 --// Teleport Logic
 local function teleportToTarget()
@@ -88,7 +91,8 @@ function Library:CreateWindow(title)
                 Callback = callback,
                 IsButton = config and config.isButton or false,
                 IsScrollingDropdown = config and config.isScrollingDropdown or false,
-                IsSpeedInput = config and config.isSpeedInput or false
+                IsSpeedInput = config and config.isSpeedInput or false,
+                IsFovInput = config and config.isFovInput or false
             })
         end
         
@@ -122,7 +126,7 @@ function Library:Load()
         mainCorner.Parent = mainFrame
         
         local stroke = Instance.new("UIStroke")
-        stroke.Color = Color3.fromRGB(0, 255, 128)
+        stroke.Color = accentColor
         stroke.Thickness = 1.5
         stroke.Transparency = 0.3
         stroke.Parent = mainFrame
@@ -130,7 +134,7 @@ function Library:Load()
         local titleBar = Instance.new("TextLabel")
         titleBar.Size = UDim2.new(1, -70, 0, 40)
         titleBar.BackgroundTransparency = 1
-        titleBar.TextColor3 = Color3.fromRGB(0, 255, 128)
+        titleBar.TextColor3 = accentColor
         titleBar.Font = Enum.Font.GothamBold
         titleBar.TextSize = 13
         titleBar.TextXAlignment = Enum.TextXAlignment.Left
@@ -198,7 +202,7 @@ function Library:Load()
         contentContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
         contentContainer.AutomaticCanvasSize = Enum.AutomaticSize.Y
         contentContainer.ScrollBarThickness = 2
-        contentContainer.ScrollBarImageColor3 = Color3.fromRGB(0, 255, 128)
+        contentContainer.ScrollBarImageColor3 = accentColor
         contentContainer.Parent = mainFrame
         
         local contentLayout = Instance.new("UIListLayout")
@@ -245,18 +249,18 @@ function Library:Load()
                     togButton.BackgroundColor3 = Color3.fromRGB(0, 130, 220)
                     togButton.TextColor3 = Color3.fromRGB(255, 255, 255)
                     togButton.Text = tab.Name
-                elseif tab.IsSpeedInput then
+                elseif tab.IsSpeedInput or tab.IsFovInput then
                     togButton.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
                     togButton.TextColor3 = Color3.fromRGB(200, 200, 200)
-                    togButton.Text = "  Speed Value:"
+                    togButton.Text = tab.IsSpeedInput and "  Speed Value:" or "  FOV Radius:"
                     togButton.TextXAlignment = Enum.TextXAlignment.Left
                     
                     local textBox = Instance.new("TextBox")
                     textBox.Size = UDim2.new(0, 75, 0, 24)
                     textBox.Position = UDim2.new(1, -80, 0.5, -12)
                     textBox.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
-                    textBox.TextColor3 = Color3.fromRGB(0, 255, 128)
-                    textBox.Text = tostring(customWalkSpeed)
+                    textBox.TextColor3 = accentColor
+                    textBox.Text = tab.IsSpeedInput and tostring(customWalkSpeed) or tostring(fovradius)
                     textBox.Font = Enum.Font.GothamBold
                     textBox.TextSize = 11
                     textBox.Parent = togButton
@@ -268,11 +272,16 @@ function Library:Load()
                     textBox.FocusLost:Connect(function()
                         local num = tonumber(textBox.Text)
                         if num then
-                            customWalkSpeed = num
-                            textBox.Text = tostring(customWalkSpeed)
-                            notify("WalkSpeed set to: " .. num)
+                            if tab.IsSpeedInput then
+                                customWalkSpeed = num
+                                notify("WalkSpeed set to: " .. num)
+                            else
+                                fovradius = num
+                                notify("FOV Radius set to: " .. num)
+                            end
+                            textBox.Text = tostring(num)
                         else
-                            textBox.Text = tostring(customWalkSpeed)
+                            textBox.Text = tab.IsSpeedInput and tostring(customWalkSpeed) or tostring(fovradius)
                         end
                     end)
                 elseif tab.IsScrollingDropdown then
@@ -374,13 +383,13 @@ function Library:Load()
                     togButton.TextXAlignment = Enum.TextXAlignment.Left
                 end
                 
-                if not tab.IsSpeedInput and not tab.IsScrollingDropdown and not tab.IsButton then
+                if not tab.IsSpeedInput and not tab.IsFovInput and not tab.IsScrollingDropdown and not tab.IsButton then
                     local pad = Instance.new("UIPadding")
                     pad.PaddingLeft = UDim.new(0, 6)
                     pad.Parent = togButton
                 end
 
-                if not tab.IsSpeedInput then
+                if not tab.IsSpeedInput and not tab.IsFovInput then
                     togButton.Font = Enum.Font.GothamBold
                     togButton.TextSize = 11
                 end
@@ -391,7 +400,7 @@ function Library:Load()
                 corner.Parent = togButton
                 
                 local currentState = tab.State
-                if not tab.IsButton and not tab.IsScrollingDropdown and not tab.IsSpeedInput then
+                if not tab.IsButton and not tab.IsScrollingDropdown and not tab.IsSpeedInput and not tab.IsFovInput then
                     togButton.MouseButton1Click:Connect(function()
                         currentState = not currentState
                         togButton.Text = "  " .. tab.Name .. " : " .. (currentState and "ON" or "OFF")
@@ -416,14 +425,14 @@ function Library:Load()
                     btn.TextColor3 = Color3.fromRGB(160, 160, 175)
                 end
                 itemHolder.Visible = true
-                cBtn.BackgroundColor3 = Color3.fromRGB(0, 255, 128)
+                cBtn.BackgroundColor3 = accentColor
                 cBtn.TextColor3 = Color3.fromRGB(18, 18, 24)
             end)
         end
         
         if categoryFrames[1] then
             categoryFrames[1].Visible = true
-            categoryButtons[1].BackgroundColor3 = Color3.fromRGB(0, 255, 128)
+            categoryButtons[1].BackgroundColor3 = accentColor
             categoryButtons[1].TextColor3 = Color3.fromRGB(18, 18, 24)
         end
         
@@ -440,7 +449,7 @@ function Library:Load()
     end
 end
 
-local Window = Library:CreateWindow("kyuzxc simple mod menu")
+local Window = Library:CreateWindow("kyuzxc simple mod menu [upgraded]")
 
 --// Category 1: Movement
 local catMovement = Window:CreateCategory("Movement")
@@ -467,6 +476,8 @@ catVisuals:CreateTab("esp boxes", {enabled = true}, function(tog) boxenabled = t
 catVisuals:CreateTab("esp skeleton", {enabled = true}, function(tog) skeletonenabled = tog end)
 catVisuals:CreateTab("esp tracers", {enabled = true}, function(tog) tracerenabled = tog end)
 catVisuals:CreateTab("distance tags", {enabled = true}, function(tog) showdist = tog end)
+catVisuals:CreateTab("fov circle", {enabled = false}, function(tog) fovcircleenabled = tog end)
+catVisuals:CreateTab("fov value", {isFovInput = true})
 
 --// Category 3: Teleport
 local catTeleport = Window:CreateCategory("Teleport")
@@ -524,14 +535,26 @@ RunService.Stepped:Connect(function()
     end
 end)
 
---// True 2D Bounding Box, Skeleton & Center Tracer ESP
-local espCache = {}
+--// Visuals: FOV Circle & ESP Drawing
 local visualGui = Instance.new("ScreenGui")
 visualGui.Name = "KyuzxcVisualsGui"
 visualGui.ResetOnSpawn = false
 visualGui.IgnoreGuiInset = true
 visualGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
 visualGui.Parent = uiParent
+
+local fovCircle = Instance.new("Frame")
+fovCircle.AnchorPoint = Vector2.new(0.5, 0.5)
+fovCircle.BackgroundTransparency = 1
+fovCircle.Visible = false
+fovCircle.Parent = visualGui
+
+local fovStroke = Instance.new("UIStroke")
+fovStroke.Color = Color3.fromRGB(255, 255, 255)
+fovStroke.Thickness = 1.5
+fovStroke.Parent = fovCircle
+
+local espCache = {}
 
 local function removeESP(p)
     if espCache[p] then
@@ -637,7 +660,6 @@ local function updatePlayerESP(p)
     end
     
     local cache = espCache[p]
-
     local isTeammate = isPlayerTeammate(p)
     if (isTeammate and not showteam) or (not isTeammate and not showenemy) then
         hideESP(cache)
@@ -665,7 +687,6 @@ local function updatePlayerESP(p)
     local hrpPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
     
     if onScreen then
-        -- Tracers
         if cache.TracerFrame then
             cache.TracerFrame.Visible = tracerenabled
             cache.TracerFrame.BackgroundColor3 = activeColor
@@ -680,7 +701,6 @@ local function updatePlayerESP(p)
             end
         end
 
-        -- 2D Boxes
         if cache.BoxTop and cache.BoxBottom and cache.BoxLeft and cache.BoxRight then
             cache.BoxTop.Visible = boxenabled
             cache.BoxBottom.Visible = boxenabled
@@ -703,23 +723,18 @@ local function updatePlayerESP(p)
 
                 cache.BoxTop.Size = UDim2.new(0, boxSizeX, 0, 1.5)
                 cache.BoxTop.Position = UDim2.new(0, centerX, 0, centerY - (boxSizeY / 2))
-                cache.BoxTop.Rotation = 0
 
                 cache.BoxBottom.Size = UDim2.new(0, boxSizeX, 0, 1.5)
                 cache.BoxBottom.Position = UDim2.new(0, centerX, 0, centerY + (boxSizeY / 2))
-                cache.BoxBottom.Rotation = 0
 
                 cache.BoxLeft.Size = UDim2.new(0, 1.5, 0, boxSizeY)
                 cache.BoxLeft.Position = UDim2.new(0, centerX - (boxSizeX / 2), 0, centerY)
-                cache.BoxLeft.Rotation = 0
 
                 cache.BoxRight.Size = UDim2.new(0, 1.5, 0, boxSizeY)
                 cache.BoxRight.Position = UDim2.new(0, centerX + (boxSizeX / 2), 0, centerY)
-                cache.BoxRight.Rotation = 0
             end
         end
 
-        -- Skeleton
         local skel = cache.SkeletonLines
         if skel then
             local torsoPart = char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
@@ -775,6 +790,12 @@ local function updatePlayerESP(p)
 end
 
 RunService.RenderStepped:Connect(function()
+    fovCircle.Visible = fovcircleenabled
+    if fovcircleenabled then
+        fovCircle.Size = UDim2.new(0, fovradius * 2, 0, fovradius * 2)
+        fovCircle.Position = UDim2.new(0, Camera.ViewportSize.X / 2, 0, Camera.ViewportSize.Y / 2)
+    end
+
     for _, p in ipairs(Players:GetPlayers()) do
         if p ~= player then
             updatePlayerESP(p)
