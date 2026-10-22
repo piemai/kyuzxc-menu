@@ -1,4 +1,4 @@
---// Kyuzxc Simple Mod Menu (Upgraded & Modernized Edition)
+--// Kyuzxc Simple Mod Menu (Upgraded 3-Category Edition + Fixed Teleport List)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -46,8 +46,8 @@ local godmodeenabled = false
 local selectedTargetPlayer = nil
 
 --// ESP Colors
-local teamColor = Color3.fromRGB(0, 255, 120)  -- Modern Green
-local enemyColor = Color3.fromRGB(255, 75, 75) -- Modern Red
+local teamColor = Color3.fromRGB(0, 255, 120)  -- Green (Team)
+local enemyColor = Color3.fromRGB(255, 75, 75) -- Red (Enemy)
 
 --// Teleport Logic
 local function teleportToTarget()
@@ -64,7 +64,7 @@ local function teleportToTarget()
     end
 end
 
---// Library Framework (Upgraded Design)
+--// Library Framework
 local Library = {
     Windows = {}
 }
@@ -109,10 +109,9 @@ function Library:Load()
     
     for _, win in ipairs(self.Windows) do
         local mainFrame = Instance.new("Frame")
-        mainFrame.Size = UDim2.new(0, 280, 0, 440)
-        mainFrame.Position = UDim2.new(0.5, -140, 0.3, -220)
+        mainFrame.Size = UDim2.new(0, 290, 0, 440)
+        mainFrame.Position = UDim2.new(0.5, -145, 0.3, -220)
         mainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
-        mainFrame.BorderColor3 = Color3.fromRGB(0, 255, 128)
         mainFrame.BorderSizePixel = 0
         mainFrame.Active = true
         mainFrame.Draggable = true
@@ -122,7 +121,6 @@ function Library:Load()
         mainCorner.CornerRadius = UDim.new(0, 8)
         mainCorner.Parent = mainFrame
         
-        -- Subtle Gradient or Stroke for Modern Look
         local stroke = Instance.new("UIStroke")
         stroke.Color = Color3.fromRGB(0, 255, 128)
         stroke.Thickness = 1.5
@@ -210,15 +208,16 @@ function Library:Load()
         
         local categoryFrames = {}
         local categoryButtons = {}
+        local numCategories = #win.Categories
         
         for _, cat in ipairs(win.Categories) do
             local cBtn = Instance.new("TextButton")
-            cBtn.Size = UDim2.new(0.5, -2, 1, 0)
+            cBtn.Size = UDim2.new(1 / numCategories, -3, 1, 0)
             cBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 42)
             cBtn.TextColor3 = Color3.fromRGB(160, 160, 175)
             cBtn.Text = cat.Name
             cBtn.Font = Enum.Font.GothamBold
-            cBtn.TextSize = 10
+            cBtn.TextSize = 11
             cBtn.Parent = catBar
             
             local cCorner = Instance.new("UICorner")
@@ -237,8 +236,9 @@ function Library:Load()
             itemLayout.Padding = UDim.new(0, 6)
             itemLayout.Parent = itemHolder
             
-            for _, tab in ipairs(cat.Tabs) do
+            for idx, tab in ipairs(cat.Tabs) do
                 local togButton = Instance.new("TextButton")
+                togButton.LayoutOrder = idx * 2
                 togButton.Size = UDim2.new(1, 0, 0, 34)
                 
                 if tab.IsButton then
@@ -278,18 +278,19 @@ function Library:Load()
                 elseif tab.IsScrollingDropdown then
                     togButton.BackgroundColor3 = Color3.fromRGB(110, 40, 200)
                     togButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-                    togButton.Text = "Target: [Select Player]"
+                    togButton.Text = "Target: [Select Player] ▼"
                     
                     local dropFrame = Instance.new("ScrollingFrame")
-                    dropFrame.Size = UDim2.new(1, 0, 0, 130)
-                    dropFrame.Position = UDim2.new(0, 0, 1, 4)
+                    dropFrame.LayoutOrder = (idx * 2) + 1
+                    dropFrame.Size = UDim2.new(1, 0, 0, 180)
                     dropFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
                     dropFrame.BorderSizePixel = 0
-                    dropFrame.Visible = false
+                    dropFrame.Visible = true
                     dropFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
                     dropFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
-                    dropFrame.ZIndex = 10
-                    dropFrame.Parent = togButton
+                    dropFrame.ScrollBarThickness = 3
+                    dropFrame.ScrollBarImageColor3 = Color3.fromRGB(110, 40, 200)
+                    dropFrame.Parent = itemHolder
                     
                     local dropCorner = Instance.new("UICorner")
                     dropCorner.CornerRadius = UDim.new(0, 6)
@@ -297,11 +298,14 @@ function Library:Load()
 
                     local dropLayout = Instance.new("UIListLayout")
                     dropLayout.SortOrder = Enum.SortOrder.LayoutOrder
+                    dropLayout.Padding = UDim.new(0, 4)
                     dropLayout.Parent = dropFrame
                     
                     local function refreshPlayerList()
                         for _, child in ipairs(dropFrame:GetChildren()) do
-                            if child:IsA("TextButton") then child:Destroy() end
+                            if child:IsA("TextButton") then
+                                child:Destroy()
+                            end
                         end
                         
                         local refreshBtn = Instance.new("TextButton")
@@ -311,8 +315,11 @@ function Library:Load()
                         refreshBtn.Text = "↻ Refresh Player List"
                         refreshBtn.Font = Enum.Font.GothamBold
                         refreshBtn.TextSize = 11
-                        refreshBtn.ZIndex = 11
                         refreshBtn.Parent = dropFrame
+                        
+                        local refCorner = Instance.new("UICorner")
+                        refCorner.CornerRadius = UDim.new(0, 4)
+                        refCorner.Parent = refreshBtn
                         
                         refreshBtn.MouseButton1Click:Connect(function()
                             refreshPlayerList()
@@ -323,32 +330,41 @@ function Library:Load()
                             if p ~= player then
                                 local pBtn = Instance.new("TextButton")
                                 pBtn.Size = UDim2.new(1, 0, 0, 28)
-                                pBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 42)
-                                pBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
-                                pBtn.Text = p.Name
+                                pBtn.BackgroundColor3 = (selectedTargetPlayer == p) and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(32, 32, 45)
+                                pBtn.TextColor3 = Color3.fromRGB(235, 235, 235)
+                                pBtn.Text = p.DisplayName .. " (@" .. p.Name .. ")"
                                 pBtn.Font = Enum.Font.GothamBold
                                 pBtn.TextSize = 11
-                                pBtn.ZIndex = 11
-                                pBtn.Parent = pBtn
                                 pBtn.Parent = dropFrame
+                                
+                                local pCorner = Instance.new("UICorner")
+                                pCorner.CornerRadius = UDim.new(0, 4)
+                                pCorner.Parent = pBtn
                                 
                                 pBtn.MouseButton1Click:Connect(function()
                                     selectedTargetPlayer = p
-                                    togButton.Text = "Target: " .. p.Name
-                                    dropFrame.Visible = false
+                                    togButton.Text = "Target: " .. p.Name .. " ▼"
+                                    refreshPlayerList()
                                     notify("Target selected: " .. p.Name)
                                 end)
                             end
                         end
                     end
                     
+                    refreshPlayerList()
                     Players.PlayerAdded:Connect(refreshPlayerList)
-                    Players.PlayerRemoving:Connect(refreshPlayerList)
+                    Players.PlayerRemoving:Connect(function(leavingPlayer)
+                        if selectedTargetPlayer == leavingPlayer then
+                            selectedTargetPlayer = nil
+                            togButton.Text = "Target: [Select Player] ▼"
+                        end
+                        refreshPlayerList()
+                    end)
                     
                     togButton.MouseButton1Click:Connect(function()
                         dropFrame.Visible = not dropFrame.Visible
-                        if dropFrame.Visible then 
-                            refreshPlayerList() 
+                        if dropFrame.Visible then
+                            refreshPlayerList()
                         end
                     end)
                 else
@@ -418,7 +434,7 @@ function Library:Load()
             for _, el in ipairs(elementsToHide) do
                 el.Visible = not minimized
             end
-            mainFrame.Size = minimized and UDim2.new(0, 280, 0, 44) or UDim2.new(0, 280, 0, 440)
+            mainFrame.Size = minimized and UDim2.new(0, 290, 0, 44) or UDim2.new(0, 290, 0, 440)
             minBtn.Text = minimized and "+" or "-"
         end)
     end
@@ -426,8 +442,9 @@ end
 
 local Window = Library:CreateWindow("kyuzxc simple mod menu")
 
-local cat1 = Window:CreateCategory("Movement & Combat")
-cat1:CreateTab("noclip", {enabled = true}, function(tog) 
+--// Category 1: Movement
+local catMovement = Window:CreateCategory("Movement")
+catMovement:CreateTab("noclip", {enabled = true}, function(tog) 
     noclipped = tog 
     if not tog and player.Character then
         for _, part in ipairs(player.Character:GetDescendants()) do
@@ -435,22 +452,26 @@ cat1:CreateTab("noclip", {enabled = true}, function(tog)
         end
     end
 end)
-cat1:CreateTab("inf jump", {enabled = true}, function(tog) infjumpenabled = tog end) 
-cat1:CreateTab("speed hack", {enabled = false}, function(tog) speedenabled = tog end)
-cat1:CreateTab("speed value", {isSpeedInput = true})
-cat1:CreateTab("fly", {enabled = false}, function(tog) flyenabled = tog end)
-cat1:CreateTab("god mode", {enabled = false}, function(tog) godmodeenabled = tog end)
+catMovement:CreateTab("inf jump", {enabled = true}, function(tog) infjumpenabled = tog end) 
+catMovement:CreateTab("speed hack", {enabled = false}, function(tog) speedenabled = tog end)
+catMovement:CreateTab("speed value", {isSpeedInput = true})
+catMovement:CreateTab("fly", {enabled = false}, function(tog) flyenabled = tog end)
+catMovement:CreateTab("god mode", {enabled = false}, function(tog) godmodeenabled = tog end)
 
-local cat2 = Window:CreateCategory("Visuals & Teleport")
-cat2:CreateTab("esp team (green)", {enabled = true}, function(tog) showteam = tog end)
-cat2:CreateTab("esp enemy (red)", {enabled = true}, function(tog) showenemy = tog end)
-cat2:CreateTab("esp names", {enabled = true}, function(tog) espenabled = tog end)
-cat2:CreateTab("esp boxes", {enabled = true}, function(tog) boxenabled = tog end)
-cat2:CreateTab("esp skeleton", {enabled = true}, function(tog) skeletonenabled = tog end)
-cat2:CreateTab("esp tracers", {enabled = true}, function(tog) tracerenabled = tog end)
-cat2:CreateTab("distance tags", {enabled = true}, function(tog) showdist = tog end)
-cat2:CreateTab("select player", {isScrollingDropdown = true})
-cat2:CreateTab("teleport to target", {isButton = true}, function() teleportToTarget() end)
+--// Category 2: Visuals
+local catVisuals = Window:CreateCategory("Visuals")
+catVisuals:CreateTab("esp team (green)", {enabled = true}, function(tog) showteam = tog end)
+catVisuals:CreateTab("esp enemy (red)", {enabled = true}, function(tog) showenemy = tog end)
+catVisuals:CreateTab("esp names", {enabled = true}, function(tog) espenabled = tog end)
+catVisuals:CreateTab("esp boxes", {enabled = true}, function(tog) boxenabled = tog end)
+catVisuals:CreateTab("esp skeleton", {enabled = true}, function(tog) skeletonenabled = tog end)
+catVisuals:CreateTab("esp tracers", {enabled = true}, function(tog) tracerenabled = tog end)
+catVisuals:CreateTab("distance tags", {enabled = true}, function(tog) showdist = tog end)
+
+--// Category 3: Teleport
+local catTeleport = Window:CreateCategory("Teleport")
+catTeleport:CreateTab("select player", {isScrollingDropdown = true})
+catTeleport:CreateTab("teleport to target [T]", {isButton = true}, function() teleportToTarget() end)
 
 Library:Load()
 notify("kyuzxc menu loaded successfully!")
@@ -503,7 +524,7 @@ RunService.Stepped:Connect(function()
     end
 end)
 
---// True 2D Bounding Box, Skeleton & Center Tracer ESP (Optimized & Clean)
+--// True 2D Bounding Box, Skeleton & Center Tracer ESP
 local espCache = {}
 local visualGui = Instance.new("ScreenGui")
 visualGui.Name = "KyuzxcVisualsGui"
