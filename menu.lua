@@ -1,4 +1,4 @@
---// Kyuzxc Simple Mod Menu (iPad Edition + Categorized Tabs & Draggable Aim Button)
+--// Kyuzxc Simple Mod Menu (iPad Edition + Fixed Toggle Functions & Categorized Tabs)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -40,8 +40,8 @@ local boxenabled = true
 local skeletonenabled = true
 local tracerenabled = true
 local showdist = true
-local noclipped = true
-local infjumpenabled = true
+local noclipped = false -- Fixed default state
+local infjumpenabled = false -- Fixed default state
 local speedenabled = false
 local customWalkSpeed = 50
 local flyenabled = false
@@ -315,7 +315,7 @@ function Library:Load()
             cBtn.TextColor3 = Color3.fromRGB(160, 160, 175)
             cBtn.Text = cat.Name
             cBtn.Font = Enum.Font.GothamBold
-            cBtn.TextSize = 10 -- Dynamic sizing to fit multiple categories cleanly
+            cBtn.TextSize = 10
             cBtn.Parent = catBar
             
             local cCorner = Instance.new("UICorner")
@@ -647,7 +647,7 @@ local Window = Library:CreateWindow("kyuzxc simple mod menu [ipad]")
 
 --// Category 1: Movement
 local catMovement = Window:CreateCategory("Movement")
-catMovement:CreateTab("noclip", {enabled = true}, function(tog) 
+catMovement:CreateTab("noclip", {enabled = false}, function(tog) 
     noclipped = tog 
     if not tog and player.Character then
         for _, part in ipairs(player.Character:GetDescendants()) do
@@ -655,7 +655,7 @@ catMovement:CreateTab("noclip", {enabled = true}, function(tog)
         end
     end
 end)
-catMovement:CreateTab("inf jump", {enabled = true}, function(tog) infjumpenabled = tog end) 
+catMovement:CreateTab("inf jump", {enabled = false}, function(tog) infjumpenabled = tog end) 
 catMovement:CreateTab("speed hack", {enabled = false}, function(tog) speedenabled = tog end)
 catMovement:CreateTab("speed value", {isSpeedInput = true})
 catMovement:CreateTab("fly", {enabled = false}, function(tog) flyenabled = tog end)
@@ -1013,7 +1013,7 @@ local function updatePlayerESP(p)
                             skel[boneKey].BackgroundColor3 = activeColor
                             skel[boneKey].Size = UDim2.new(0, dist, 0, 1.5)
                             skel[boneKey].Position = UDim2.new(0, (p1.X + p2.X) / 2, 0, (p1.Y + p2.Y) / 2)
-                            skel[boneKey].Rotation = math.deg(math.atan2(p2.Y - p1.Y, p2.X - p1.X))
+    skel[boneKey].Rotation = math.deg(math.atan2(p2.Y - p1.Y, p2.X - p1.X))
                             skel[boneKey].Visible = true
                             return
                         end
