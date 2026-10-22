@@ -1,4 +1,4 @@
---// Kyuzxc Simple Mod Menu (Upgraded 3-Category Edition + Theme & FOV)
+--// Kyuzxc Simple Mod Menu (Upgraded 3-Category Edition + Fixed Teleport & Dropdown List)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -9,7 +9,7 @@ local Camera = workspace.CurrentCamera
 local player = Players.LocalPlayer
 local uiParent = (gethui and gethui()) or CoreGui
 
--- Clean up old UI instances
+-- Linisin ang lumang UI kung naka-load na
 if uiParent:FindFirstChild("KyuzxcModMenu") then
     uiParent.KyuzxcModMenu:Destroy()
 end
