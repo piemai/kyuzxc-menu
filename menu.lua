@@ -1,4 +1,4 @@
---// Kyuzxc Simple Mod Menu (iPad Edition + Mobile Aim Toggle & Smoothness Selector)
+--// Kyuzxc Simple Mod Menu (iPad Edition + Fixed Aimbot Logic)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -49,9 +49,9 @@ local godmodeenabled = false
 local fovcircleenabled = false
 local fovradius = 120
 local aimbotenabled = false
-local aimbotactive = false -- Mobile floating toggle state
-local targetPartOption = "Head" -- Options: "Head", "UpperTorso", "HumanoidRootPart"
-local aimbotSmoothing = 0.3 -- Default Medium (0 = Hard/Instant, Higher = Low/Smooth)
+local aimbotactive = false
+local targetPartOption = "Head"
+local aimbotSmoothing = 0.3
 local selectedTargetPlayer = nil
 
 --// ESP Colors & Theme
@@ -733,27 +733,32 @@ local fovAspect = Instance.new("UIAspectRatioConstraint")
 fovAspect.AspectRatio = 1
 fovAspect.Parent = fovCircle
 
---// Aimbot Target Finder with Configurable Part
+local function isPlayerTeammate(p)
+    if p.Team ~= nil and player.Team ~= nil and not p.Neutral and not player.Neutral then
+        return p.Team == player.Team
+    end
+    return false
+end
+
+--// Fixed Aimbot Target Finder Logic
 local function getClosestPlayerInFOV()
     local closestTarget = nil
     local shortestDist = fovradius
     local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
 
     for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= player then
-            local isTeammate = (p.Team ~= nil and player.Team ~= nil and not p.Neutral and not player.Neutral and p.Team == player.Team)
-            if not isTeammate then
-                local char = p.Character
-                local targetPart = char and char:FindFirstChild(targetPartOption)
-                local humanoid = char and char:FindFirstChildOfClass("Humanoid")
-                if targetPart and humanoid and humanoid.Health > 0 then
-                    local screenPos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
-                    if onScreen then
-                        local screenDist = (Vector2.new(screenPos.X, screenPos.Y) - screenCenter).Magnitude
-                        if screenDist < shortestDist then
-                            shortestDist = screenDist
-                            closestTarget = targetPart
-                        end
+        if p ~= player and not isPlayerTeammate(p) then
+            local char = p.Character
+            local targetPart = char and char:FindFirstChild(targetPartOption)
+            local humanoid = char and char:FindFirstChildOfClass("Humanoid")
+            
+            if targetPart and humanoid and humanoid.Health > 0 then
+                local screenPos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
+                if onScreen then
+                    local screenDist = (Vector2.new(screenPos.X, screenPos.Y) - screenCenter).Magnitude
+                    if screenDist < shortestDist then
+                        shortestDist = screenDist
+                        closestTarget = targetPart
                     end
                 end
             end
@@ -804,13 +809,6 @@ local function createLine()
     line.Visible = false
     line.Parent = visualGui
     return line
-end
-
-local function isPlayerTeammate(p)
-    if p.Team ~= nil and player.Team ~= nil and not p.Neutral and not player.Neutral then
-        return p.Team == player.Team
-    end
-    return false
 end
 
 local function updatePlayerESP(p)
@@ -1007,11 +1005,12 @@ RunService.RenderStepped:Connect(function()
     if aimbotenabled and aimbotactive then
         local targetPart = getClosestPlayerInFOV()
         if targetPart then
-            local targetCFrame = CFrame.new(Camera.CFrame.Position, targetPart.Position)
-            if aimbotSmoothing == 0 then
+            local currentCFrame = Camera.CFrame
+            local targetCFrame = CFrame.new(currentCFrame.Position, targetPart.Position)
+            if aimbotSmoothing <= 0 then
                 Camera.CFrame = targetCFrame
             else
-                Camera.CFrame = Camera.CFrame:Lerp(targetCFrame, 1 - aimbotSmoothing)
+                Camera.CFrame = currentCFrame:Lerp(targetCFrame, 1 - aimbotSmoothing)
             end
         end
     end
