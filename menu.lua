@@ -23,9 +23,6 @@ end
 if uiParent:FindFirstChild("KyuzxcMobileAimBtn") then
     uiParent.KyuzxcMobileAimBtn:Destroy()
 end
-if uiParent:FindFirstChild("KyuzxcLogoGui") then
-    uiParent.KyuzxcLogoGui:Destroy()
-end
 
 --// Notification Helper
 local function notify(msg)
@@ -38,9 +35,6 @@ local function notify(msg)
         })
     end)
 end
-
---// Logo Settings (Lion-Letter K Asset ID)
-local LOGO_IMAGE_ID = "rbxassetid://137377470541475" 
 
 --// Feature States
 local showteam = true
@@ -288,36 +282,6 @@ local function serverHop()
     notify("No available server found right now.")
 end
 
---// Logo Visuals Helper (Matches Violet Menu Theme)
-local function applyLogoVisuals(parentFrame, textSize)
-    if LOGO_IMAGE_ID ~= "" and LOGO_IMAGE_ID ~= "rbxassetid://0" then
-        local img = Instance.new("ImageLabel")
-        img.Size = UDim2.new(1, -4, 1, -4)
-        img.Position = UDim2.new(0, 2, 0, 2)
-        img.BackgroundTransparency = 1
-        img.Image = LOGO_IMAGE_ID
-        img.ScaleType = Enum.ScaleType.Fit
-        img.Parent = parentFrame
-    else
-        local grad = Instance.new("UIGradient")
-        grad.Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Color3.fromRGB(190, 120, 255)),
-            ColorSequenceKeypoint.new(1, Color3.fromRGB(95, 45, 180))
-        })
-        grad.Rotation = 45
-        grad.Parent = parentFrame
-
-        local txt = Instance.new("TextLabel")
-        txt.Size = UDim2.new(1, 0, 1, 0)
-        txt.BackgroundTransparency = 1
-        txt.Text = "K"
-        txt.TextColor3 = Color3.fromRGB(255, 255, 255)
-        txt.Font = Enum.Font.GothamBlack
-        txt.TextSize = textSize or 15
-        txt.Parent = parentFrame
-    end
-end
-
 --// Library Framework (Resizable & Responsive Sidebar Edition)
 local Library = {
     Windows = {}
@@ -370,61 +334,6 @@ function Library:Load()
     screenGui.ResetOnSpawn = false
     screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
     screenGui.Parent = uiParent
-
-    --// Floating Draggable Delta-Style Logo Button (Pang-Open/Close ng Menu)
-    local logoGui = Instance.new("ScreenGui")
-    logoGui.Name = "KyuzxcLogoGui"
-    logoGui.ResetOnSpawn = false
-    logoGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
-    logoGui.Parent = uiParent
-
-    local floatingLogo = Instance.new("TextButton")
-    floatingLogo.Name = "FloatingLogoBtn"
-    floatingLogo.Size = UDim2.new(0, 52, 0, 52)
-    floatingLogo.Position = UDim2.new(0, 20, 0.5, -26)
-    floatingLogo.BackgroundColor3 = Color3.fromRGB(27, 21, 42)
-    floatingLogo.Text = ""
-    floatingLogo.AutoButtonColor = true
-    floatingLogo.Active = true
-    floatingLogo.Parent = logoGui
-
-    local floatCorner = Instance.new("UICorner")
-    floatCorner.CornerRadius = UDim.new(0, 14)
-    floatCorner.Parent = floatingLogo
-
-    local floatStroke = Instance.new("UIStroke")
-    floatStroke.Color = accentColor
-    floatStroke.Thickness = 2
-    floatStroke.Parent = floatingLogo
-
-    applyLogoVisuals(floatingLogo, 22)
-
-    -- Draggable logic para sa Floating Logo
-    local logoDragging, logoDragStart, logoStartPos
-    floatingLogo.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            logoDragging = true
-            logoDragStart = input.Position
-            logoStartPos = floatingLogo.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    logoDragging = false
-                end
-            end)
-        end
-    end)
-
-    UserInputService.InputChanged:Connect(function(input)
-        if logoDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local delta = input.Position - logoDragStart
-            floatingLogo.Position = UDim2.new(
-                logoStartPos.X.Scale,
-                logoStartPos.X.Offset + delta.X,
-                logoStartPos.Y.Scale,
-                logoStartPos.Y.Offset + delta.Y
-            )
-        end
-    end)
     
     for _, win in ipairs(self.Windows) do
         local mainFrame = Instance.new("Frame")
@@ -435,18 +344,6 @@ function Library:Load()
         mainFrame.Active = true
         mainFrame.Draggable = true
         mainFrame.Parent = screenGui
-
-        -- Tap Floating Logo para i-toggle ang Main Menu (Delta Style)
-        local logoClickTime = 0
-        floatingLogo.MouseButton1Down:Connect(function()
-            logoClickTime = tick()
-        end)
-        floatingLogo.MouseButton1Up:Connect(function()
-            if tick() - logoClickTime < 0.2 then
-                mainFrame.Visible = not mainFrame.Visible
-                floatStroke.Color = mainFrame.Visible and accentColor or Color3.fromRGB(110, 95, 145)
-            end
-        end)
         
         local mainCorner = Instance.new("UICorner")
         mainCorner.CornerRadius = UDim.new(0, 12)
@@ -469,36 +366,15 @@ function Library:Load()
         headerCorner.CornerRadius = UDim.new(0, 12)
         headerCorner.Parent = header
 
-        --// Header Logo Badge (Kaliwa ng Title)
-        local headerLogo = Instance.new("Frame")
-        headerLogo.Name = "HeaderLogo"
-        headerLogo.Size = UDim2.new(0, 28, 0, 28)
-        headerLogo.Position = UDim2.new(0, 10, 0.5, -14)
-        headerLogo.BackgroundColor3 = Color3.fromRGB(38, 29, 57)
-        headerLogo.BorderSizePixel = 0
-        headerLogo.Parent = header
-
-        local hLogoCorner = Instance.new("UICorner")
-        hLogoCorner.CornerRadius = UDim.new(0, 7)
-        hLogoCorner.Parent = headerLogo
-
-        local hLogoStroke = Instance.new("UIStroke")
-        hLogoStroke.Color = accentColor
-        hLogoStroke.Thickness = 1.2
-        hLogoStroke.Parent = headerLogo
-
-        applyLogoVisuals(headerLogo, 14)
-
-        --// KYUZXC SIMPLE MOD MENU NASA LOOB NG HEADER
         local titleBar = Instance.new("TextLabel")
-        titleBar.Size = UDim2.new(1, -110, 1, 0)
+        titleBar.Size = UDim2.new(1, -70, 1, 0)
         titleBar.BackgroundTransparency = 1
         titleBar.TextColor3 = Color3.fromRGB(205, 170, 255)
         titleBar.Font = Enum.Font.GothamBold
-        titleBar.TextSize = 12
+        titleBar.TextSize = 13
         titleBar.TextXAlignment = Enum.TextXAlignment.Left
-        titleBar.Position = UDim2.new(0, 44, 0, 0)
-        titleBar.Text = "KYUZXC SIMPLE MOD MENU"
+        titleBar.Position = UDim2.new(0, 14, 0, 0)
+        titleBar.Text = "  " .. string.upper(win.Title)
         titleBar.Parent = header
         
         local closeBtn = Instance.new("TextButton")
@@ -517,7 +393,6 @@ function Library:Load()
         
         closeBtn.MouseButton1Click:Connect(function()
             screenGui:Destroy()
-            logoGui:Destroy()
             if uiParent:FindFirstChild("KyuzxcVisualsGui") then
                 uiParent.KyuzxcVisualsGui:Destroy()
             end
