@@ -1,4 +1,4 @@
---// Kyuzxc Simple Mod Menu (iPad Edition + Draggable Center Aimbot Button)
+--// Kyuzxc Simple Mod Menu (iPad Edition + Fully Fixed Callbacks for Inf Jump & Speed)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -40,8 +40,8 @@ local boxenabled = true
 local skeletonenabled = true
 local tracerenabled = true
 local showdist = true
-local noclipped = true
-local infjumpenabled = true
+local noclipped = false
+local infjumpenabled = false
 local speedenabled = false
 local customWalkSpeed = 50
 local flyenabled = false
@@ -69,7 +69,7 @@ mobileGui.Parent = uiParent
 local aimToggleButton = Instance.new("TextButton")
 aimToggleButton.Size = UDim2.new(0, 75, 0, 75)
 aimToggleButton.AnchorPoint = Vector2.new(0.5, 0.5)
-aimToggleButton.Position = UDim2.new(0.5, 0, 0.85, 0) -- Nakalagay sa gitna malapit sa ibaba para madaling ma-reach
+aimToggleButton.Position = UDim2.new(0.5, 0, 0.85, 0)
 aimToggleButton.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
 aimToggleButton.TextColor3 = Color3.fromRGB(255, 75, 75)
 aimToggleButton.Text = "AIM: OFF"
@@ -89,7 +89,7 @@ aimBtnStroke.Thickness = 2
 aimBtnStroke.Parent = aimToggleButton
 
 --// Custom Smooth Draggable Logic for Touch/Mouse
-local dragging, dragInput, dragStart, startPos
+local dragging, dragStart, startPos
 
 aimToggleButton.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -117,14 +117,13 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Tap/Click toggle logic (differentiate between drag and click)
 local clickTimer = 0
 aimToggleButton.MouseButton1Down:Connect(function()
     clickTimer = tick()
 end)
 
 aimToggleButton.MouseButton1Up:Connect(function()
-    if tick() - clickTimer < 0.2 then -- Kung mabilis na tap/click, i-toggle ang aimbot
+    if tick() - clickTimer < 0.2 then
         aimbotactive = not aimbotactive
         if aimbotactive then
             aimToggleButton.BackgroundColor3 = Color3.fromRGB(0, 180, 90)
@@ -316,7 +315,7 @@ function Library:Load()
             cBtn.TextColor3 = Color3.fromRGB(160, 160, 175)
             cBtn.Text = cat.Name
             cBtn.Font = Enum.Font.GothamBold
-            cBtn.TextSize = 11
+            cBtn.TextSize = 10
             cBtn.Parent = catBar
             
             local cCorner = Instance.new("UICorner")
@@ -657,12 +656,18 @@ catMovement:CreateTab("noclip", {enabled = true}, function(tog)
     end
 end)
 catMovement:CreateTab("inf jump", {enabled = true}, function(tog) infjumpenabled = tog end) 
-catMovement:CreateTab("speed hack", {enabled = false}, function(tog) speedenabled = tog end)
+catMovement:CreateTab("speed hack", {enabled = false}, function(tog) 
+    speedenabled = tog 
+    if not tog and player.Character then
+        local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then humanoid.WalkSpeed = 16 end
+    end
+end)
 catMovement:CreateTab("speed value", {isSpeedInput = true})
 catMovement:CreateTab("fly", {enabled = false}, function(tog) flyenabled = tog end)
 catMovement:CreateTab("god mode", {enabled = false}, function(tog) godmodeenabled = tog end)
 
---// Category 2: Visuals & Combat
+--// Category 2: Visuals
 local catVisuals = Window:CreateCategory("Visuals")
 catVisuals:CreateTab("esp team (green)", {enabled = true}, function(tog) showteam = tog end)
 catVisuals:CreateTab("esp enemy (red)", {enabled = true}, function(tog) showenemy = tog end)
@@ -671,7 +676,10 @@ catVisuals:CreateTab("esp boxes", {enabled = true}, function(tog) boxenabled = t
 catVisuals:CreateTab("esp skeleton", {enabled = true}, function(tog) skeletonenabled = tog end)
 catVisuals:CreateTab("esp tracers", {enabled = true}, function(tog) tracerenabled = tog end)
 catVisuals:CreateTab("distance tags", {enabled = true}, function(tog) showdist = tog end)
-catVisuals:CreateTab("aimbot button", {enabled = false}, function(tog) 
+
+--// Category 3: Combat (Aimbot & FOV)
+local catCombat = Window:CreateCategory("Combat")
+catCombat:CreateTab("aimbot button", {enabled = false}, function(tog) 
     aimbotenabled = tog 
     aimToggleButton.Visible = tog
     if not tog then
@@ -682,12 +690,12 @@ catVisuals:CreateTab("aimbot button", {enabled = false}, function(tog)
         aimToggleButton.Text = "AIM: OFF"
     end
 end)
-catVisuals:CreateTab("aim part", {isPartDropdown = true})
-catVisuals:CreateTab("aim smoothness", {isSmoothDropdown = true})
-catVisuals:CreateTab("fov circle", {enabled = false}, function(tog) fovcircleenabled = tog end)
-catVisuals:CreateTab("fov value", {isFovInput = true})
+catCombat:CreateTab("aim part", {isPartDropdown = true})
+catCombat:CreateTab("aim smoothness", {isSmoothDropdown = true})
+catCombat:CreateTab("fov circle", {enabled = false}, function(tog) fovcircleenabled = tog end)
+catCombat:CreateTab("fov value", {isFovInput = true})
 
---// Category 3: Teleport
+--// Category 4: Teleport
 local catTeleport = Window:CreateCategory("Teleport")
 catTeleport:CreateTab("select player", {isScrollingDropdown = true})
 catTeleport:CreateTab("teleport to target [T]", {isButton = true}, function() teleportToTarget() end)
@@ -1019,7 +1027,7 @@ local function updatePlayerESP(p)
                     skel[boneKey].Visible = false
                 end
 
-                drawBone("Torso_LHand", leftHandPart)
+                drawBone("Torstate_LHand", leftHandPart)
                 drawBone("Torso_RHand", rightHandPart)
                 drawBone("Torso_LFoot", leftFootPart)
                 drawBone("Torso_RFoot", rightFootPart)
