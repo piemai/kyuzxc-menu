@@ -1,4 +1,4 @@
---// Kyuzxc Simple Mod Menu (iPad Edition + Unlimited Ammo & Fast Reload)
+--// Kyuzxc Simple Mod Menu (iPad Edition + Advanced Hooking for Ammo & Reload)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -830,6 +830,7 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
+--// Advanced Gun Hooking Loop for Arsenal / FPS Games
 RunService.Stepped:Connect(function()
     local char = player.Character
     if char then
@@ -848,25 +849,27 @@ RunService.Stepped:Connect(function()
             end
         end
         
-        -- Unlimited Ammo & Fast Reload Hook (Universal Gun Tool Scan)
-        if unlimitammoenabled or fastreloadenabled then
-            local tool = char:FindFirstChildOfClass("Tool")
-            if tool then
-                pcall(function()
-                    for _, v in pairs(tool:GetDescendants()) do
-                        if v:IsA("NumberValue") or v:IsA("IntValue") then
-                            local name = string.lower(v.Name)
-                            if unlimitammoenabled and (string.find(name, "ammo") or string.find(name, "clip") or string.find(name, "bullets")) then
-                                v.Value = 999
+        -- Advanced Gun Scan (Player Backpack + Character Tools + PlayerGui/Viewmodel hooks)
+        pcall(function()
+            local backpack = player:FindFirstChildOfClass("Backpack")
+            local containers = {char, backpack}
+            
+            for _, container in ipairs(containers) do
+                if container then
+                    for _, obj in ipairs(container:GetDescendants()) do
+                        if obj:IsA("NumberValue") or obj:IsA("IntValue") then
+                            local n = string.lower(obj.Name)
+                            if unlimitammoenabled and (string.find(n, "ammo") or string.find(n, "clip") or string.find(n, "mag") or string.find(n, "bullets")) then
+                                obj.Value = 999
                             end
-                            if fastreloadenabled and (string.find(name, "reload") or string.find(name, "cooldown") or string.find(name, "rate")) then
-                                v.Value = 0.01
+                            if fastreloadenabled and (string.find(n, "reload") or string.find(n, "cooldown") or string.find(n, "firerate") or string.find(n, "delay")) then
+                                obj.Value = 0.01
                             end
                         end
                     end
-                end)
+                end
             end
-        end
+        end)
         
         if hrp then
             local bv = hrp:FindFirstChild("KyuzxcFlyBodyVelocity")
@@ -1194,7 +1197,7 @@ local function updatePlayerESP(p)
                     skel[boneKey].Visible = false
                 end
 
-                drawBone("Torso_LHand", leftHandPart)
+                drawBone("Torso_LHand", leftHandFile or leftHandPart)
                 drawBone("Torso_RHand", rightHandPart)
                 drawBone("Torso_LFoot", leftFootPart)
                 drawBone("Torso_RFoot", rightFootPart)
