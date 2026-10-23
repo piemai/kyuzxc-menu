@@ -704,18 +704,25 @@ function Library:Load()
         
         local minimized = false
         local expandedSize = mainFrame.Size
+        local expandedMinSize = sizeConstraint.MinSize
         local elementsToHide = {catBar, contentContainer, resizeGrip}
-        minBtn.MouseButton1Click:Connect(function()
+        minBtn.Activated:Connect(function()
             minimized = not minimized
             if minimized then
+                -- Save the current size before collapsing. The original UISizeConstraint
+                -- enforced a 280px minimum height, which prevented the window shrinking.
                 expandedSize = mainFrame.Size
+                expandedMinSize = sizeConstraint.MinSize
+                sizeConstraint.MinSize = Vector2.new(280, 44)
                 for _, el in ipairs(elementsToHide) do el.Visible = false end
-                mainFrame.Size = UDim2.new(0, math.max(280, mainFrame.AbsoluteSize.X), 0, 44)
+                mainFrame.Size = UDim2.fromOffset(math.max(280, mainFrame.AbsoluteSize.X), 44)
+                resizeGrip.Visible = false
             else
+                sizeConstraint.MinSize = expandedMinSize
                 mainFrame.Size = expandedSize
                 for _, el in ipairs(elementsToHide) do el.Visible = true end
             end
-            minBtn.Text = minimized and "+" or "-"
+            minBtn.Text = minimized and "+" or "−"
         end)
     end
 end
