@@ -1,10 +1,11 @@
---// Kyuzxc Simple Mod Menu (iPad Edition + FOV Adjuster & Infinite Stamina)
+--// Kyuzxc Simple Mod Menu (Blox Fruits Edition + Fruits/Chest ESP, Walk on Water & Auto-Farm)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
 local StarterGui = game:GetService("StarterGui")
-local Camera = workspace.CurrentCamera
+local Workspace = game:GetService("Workspace")
+local Camera = Workspace.CurrentCamera
 
 local player = Players.LocalPlayer
 local uiParent = (gethui and gethui()) or CoreGui
@@ -25,7 +26,7 @@ local function notify(msg)
     print("[Kyuzxc] " .. msg)
     pcall(function()
         StarterGui:SetCore("SendNotification", {
-            Title = "Kyuzxc Menu",
+            Title = "Kyuzxc Blox Fruits",
             Text = msg,
             Duration = 3
         })
@@ -41,14 +42,19 @@ local skeletonenabled = true
 local tracerenabled = true
 local showdist = true
 local maxEspDistance = 300
+local fruitespenabled = false
+local chestespenabled = false
 local noclipped = false
 local infjumpenabled = false
 local speedenabled = false
 local customWalkSpeed = 50
 local flyenabled = false
+local walkonwaterenabled = false
+local infstaminaenabled = false
+local autoclickerenabled = false
+local autofarmenabled = false
 local fovadjustenabled = false
 local customCameraFOV = 90
-local infstaminaenabled = false
 local fovcircleenabled = false
 local fovradius = 120
 local aimbotenabled = false
@@ -60,6 +66,8 @@ local selectedTargetPlayer = nil
 --// ESP Colors & Violet Theme
 local teamColor = Color3.fromRGB(0, 255, 120)  -- Green (Team)
 local enemyColor = Color3.fromRGB(255, 75, 75) -- Red (Enemy)
+local fruitColor = Color3.fromRGB(255, 215, 0)   -- Gold/Yellow (Fruit)
+local chestColor = Color3.fromRGB(0, 191, 255)   -- Deep Sky Blue (Chest)
 local accentColor = Color3.fromRGB(165, 95, 255) -- Violet Accent
 
 --// Floating Draggable Mobile Aimbot Toggle Button
@@ -752,7 +760,7 @@ function Library:Load()
     end
 end
 
-local Window = Library:CreateWindow("kyuzxc simple mod menu [ipad]")
+local Window = Library:CreateWindow("kyuzxc blox fruits [ipad]")
 
 --// Category 1: Movement
 local catMovement = Window:CreateCategory("Movement")
@@ -778,11 +786,14 @@ catMovement:CreateTab("speed value", {isSpeedInput = true})
 catMovement:CreateTab("fly", {enabled = false}, function(tog) 
     flyenabled = tog 
 end)
+catMovement:CreateTab("walk on water", {enabled = false}, function(tog) 
+    walkonwaterenabled = tog 
+end)
 catMovement:CreateTab("infinite stamina", {enabled = false}, function(tog) 
     infstaminaenabled = tog 
 end)
 
---// Category 2: Visuals
+--// Category 2: Visuals (ESP + Fruits & Chests)
 local catVisuals = Window:CreateCategory("Visuals")
 catVisuals:CreateTab("esp team (green)", {enabled = true}, function(tog) showteam = tog end)
 catVisuals:CreateTab("esp enemy (red)", {enabled = true}, function(tog) showenemy = tog end)
@@ -791,9 +802,11 @@ catVisuals:CreateTab("esp boxes", {enabled = true}, function(tog) boxenabled = t
 catVisuals:CreateTab("esp skeleton", {enabled = true}, function(tog) skeletonenabled = tog end)
 catVisuals:CreateTab("esp tracers", {enabled = true}, function(tog) tracerenabled = tog end)
 catVisuals:CreateTab("distance tags", {enabled = true}, function(tog) showdist = tog end)
+catVisuals:CreateTab("fruit esp (gold)", {enabled = false}, function(tog) fruitespenabled = tog end)
+catVisuals:CreateTab("chest esp (blue)", {enabled = false}, function(tog) chestespenabled = tog end)
 catVisuals:CreateTab("max esp distance", {isMaxDistInput = true})
 
---// Category 3: Combat (Aimbot, FOV & Camera)
+--// Category 3: Combat & Farming
 local catCombat = Window:CreateCategory("Combat")
 catCombat:CreateTab("aimbot button", {enabled = false}, function(tog) 
     aimbotenabled = tog 
@@ -805,6 +818,12 @@ catCombat:CreateTab("aimbot button", {enabled = false}, function(tog)
         aimBtnStroke.Color = Color3.fromRGB(255, 75, 75)
         aimToggleButton.Text = "AIM: OFF"
     end
+end)
+catCombat:CreateTab("auto-clicker / fast attack", {enabled = false}, function(tog) 
+    autoclickerenabled = tog 
+end)
+catCombat:CreateTab("auto-farm nearest npc", {enabled = false}, function(tog) 
+    autofarmenabled = tog 
 end)
 catCombat:CreateTab("aim part", {isPartDropdown = true})
 catCombat:CreateTab("aim smoothness", {isSmoothDropdown = true})
@@ -819,7 +838,7 @@ catTeleport:CreateTab("select player", {isScrollingDropdown = true})
 catTeleport:CreateTab("teleport to target [T]", {isButton = true}, function() teleportToTarget() end)
 
 Library:Load()
-notify("kyuzxc menu loaded successfully!")
+notify("kyuzxc blox fruits menu loaded!")
 
 UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
@@ -840,7 +859,7 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
---// Main Render / Stepped Hook Loop (Movement, FOV Adjuster & Infinite Stamina)
+--// Main Loop (Movement, Walk on Water, Stamina, Auto-Clicker & Auto-Farm)
 RunService.Stepped:Connect(function()
     local char = player.Character
     if char then
@@ -859,16 +878,60 @@ RunService.Stepped:Connect(function()
             end
         end
         
-        -- Infinite Stamina Hook (Scans and freezes stamina/energy values inside character)
+        -- Walk on Water Logic (Solidifies water beneath the player)
+        if walkonwaterenabled and hrp then
+            pcall(function()
+                for _, part in ipairs(Workspace:GetPartsInPart(hrp)) do
+                    local name = string.lower(part.Name)
+                    if string.find(name, "water") or string.find(name, "sea") or part.Material == Enum.Material.Water then
+                        part.CanCollide = true
+                    end
+                end
+            end)
+        end
+        
+        -- Infinite Stamina
         if infstaminaenabled then
             pcall(function()
                 for _, obj in ipairs(char:GetDescendants()) do
                     if obj:IsA("NumberValue") or obj:IsA("IntValue") then
                         local n = string.lower(obj.Name)
-                        if string.find(n, "stamina") or string.find(n, "energy") or string.find(n, "fatigue") or string.find(n, "sprint") then
+                        if string.find(n, "stamina") or string.find(n, "energy") or string.find(n, "chi") then
                             obj.Value = 100
                         end
                     end
+                end
+            end)
+        end
+        
+        -- Auto-Clicker / Fast Attack Simulation
+        if autoclickerenabled then
+            pcall(function()
+                local vim = game:GetService("VirtualInputManager")
+                vim:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+                task.wait(0.05)
+                vim:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+            end)
+        end
+        
+        -- Auto-Farm Nearest Enemy/NPC
+        if autofarmenabled and hrp then
+            pcall(function()
+                local closestEnemy = nil
+                local shortestDist = math.huge
+                for _, mob in ipairs(Workspace.Enemies:GetChildren()) do
+                    local mobHrp = mob:FindFirstChild("HumanoidRootPart")
+                    local mobHum = mob:FindFirstChildOfClass("Humanoid")
+                    if mobHrp and mobHum and mobHum.Health > 0 then
+                        local dist = (hrp.Position - mobHrp.Position).Magnitude
+                        if dist < shortestDist then
+                            shortestDist = dist
+                            closestEnemy = mobHrp
+                        end
+                    end
+                end
+                if closestEnemy then
+                    hrp.CFrame = closestEnemy.CFrame + Vector3.new(0, 4, 3)
                 end
             end)
         end
@@ -909,7 +972,7 @@ RunService.Stepped:Connect(function()
     end
 end)
 
---// Visuals: Camera FOV Adjuster, Round FOV Circle, Mobile Aimbot & ESP Drawing
+--// Visuals: Fruit ESP, Chest ESP, Camera FOV & Player ESP
 local visualGui = Instance.new("ScreenGui")
 visualGui.Name = "KyuzxcVisualsGui"
 visualGui.ResetOnSpawn = false
@@ -970,6 +1033,8 @@ local function getClosestPlayerInFOV()
 end
 
 local espCache = {}
+local fruitCache = {}
+local chestCache = {}
 
 local function removeESP(p)
     if espCache[p] then
@@ -1003,10 +1068,10 @@ end
 
 Players.PlayerRemoving:Connect(removeESP)
 
-local function createLine()
+local function createLine(color)
     local line = Instance.new("Frame")
     line.AnchorPoint = Vector2.new(0.5, 0.5)
-    line.BackgroundColor3 = enemyColor
+    line.BackgroundColor3 = color or enemyColor
     line.BorderSizePixel = 0
     line.Visible = false
     line.Parent = visualGui
@@ -1030,15 +1095,11 @@ local function updatePlayerESP(p)
     if localHrp then
         local dist = (localHrp.Position - hrp.Position).Magnitude
         if dist > maxEspDistance then
-            if espCache[p] then
-                hideESP(espCache[p])
-            end
+            if espCache[p] then hideESP(espCache[p]) end
             return
         end
     else
-        if espCache[p] then
-            hideESP(espCache[p])
-        end
+        if espCache[p] then hideESP(espCache[p]) end
         return
     end
     
@@ -1063,11 +1124,11 @@ local function updatePlayerESP(p)
         
         espCache[p].Billboard = billboard
         espCache[p].TextLabel = textLabel
-        espCache[p].TracerFrame = createLine()
-        espCache[p].BoxTop = createLine()
-        espCache[p].BoxBottom = createLine()
-        espCache[p].BoxLeft = createLine()
-        espCache[p].BoxRight = createLine()
+        espCache[p].TracerFrame = createLine(enemyColor)
+        espCache[p].BoxTop = createLine(enemyColor)
+        espCache[p].BoxBottom = createLine(enemyColor)
+        espCache[p].BoxLeft = createLine(enemyColor)
+        espCache[p].BoxRight = createLine(enemyColor)
 
         local skFolder = Instance.new("Folder")
         skFolder.Name = "SkeletonFolder"
@@ -1075,11 +1136,11 @@ local function updatePlayerESP(p)
         espCache[p].SkeletonHolder = skFolder
 
         espCache[p].SkeletonLines = {
-            Head_Neck = createLine(),
-            Torso_LHand = createLine(),
-            Torso_RHand = createLine(),
-            Torso_LFoot = createLine(),
-            Torso_RFoot = createLine()
+            Head_Neck = createLine(enemyColor),
+            Torso_LHand = createLine(enemyColor),
+            Torso_RHand = createLine(enemyColor),
+            Torso_LFoot = createLine(enemyColor),
+            Torso_RFoot = createLine(enemyColor)
         }
         for _, line in pairs(espCache[p].SkeletonLines) do line.Parent = skFolder end
     end
@@ -1212,8 +1273,81 @@ local function updatePlayerESP(p)
     end
 end
 
+--// Fruit & Chest ESP Scanner Function
+local function scanBloxFruitsItems()
+    pcall(function()
+        -- Fruit ESP
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            if string.find(string.lower(obj.Name), "fruit") and (obj:IsA("Model") or obj:IsA("Part")) then
+                local rootPart = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")) or obj
+                if rootPart and not fruitCache[obj] then
+                    local bg = Instance.new("BillboardGui")
+                    bg.Name = "FruitESP"
+                    bg.Size = UDim2.new(0, 120, 0, 30)
+                    bg.StudsOffset = Vector3.new(0, 2, 0)
+                    bg.AlwaysOnTop = true
+                    bg.Parent = rootPart
+                    
+                    local tl = Instance.new("TextLabel")
+                    tl.Size = UDim2.new(1, 0, 1, 0)
+                    tl.BackgroundTransparency = 1
+                    tl.TextColor3 = fruitColor
+                    tl.TextStrokeTransparency = 0
+                    tl.TextSize = 12
+                    tl.Font = Enum.Font.GothamBold
+                    tl.Text = "🍎 " .. obj.Name
+                    tl.Parent = bg
+                    
+                    fruitCache[obj] = bg
+                end
+            end
+        end
+        for obj, gui in pairs(fruitCache) do
+            if not obj or not obj.Parent then
+                if gui then gui:Destroy() end
+                fruitCache[obj] = nil
+            else
+                gui.Enabled = fruitespenabled
+            end
+        end
+
+        -- Chest ESP
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            if (string.find(string.lower(obj.Name), "chest") or string.find(string.lower(obj.Name), "box")) and obj:IsA("BasePart") then
+                if not chestCache[obj] then
+                    local bg = Instance.new("BillboardGui")
+                    bg.Name = "ChestESP"
+                    bg.Size = UDim2.new(0, 100, 0, 30)
+                    bg.StudsOffset = Vector3.new(0, 1.5, 0)
+                    bg.AlwaysOnTop = true
+                    bg.Parent = obj
+                    
+                    local tl = Instance.new("TextLabel")
+                    tl.Size = UDim2.new(1, 0, 1, 0)
+                    tl.BackgroundTransparency = 1
+                    tl.TextColor3 = chestColor
+                    tl.TextStrokeTransparency = 0
+                    tl.TextSize = 12
+                    tl.Font = Enum.Font.GothamBold
+                    tl.Text = "📦 Chest"
+                    tl.Parent = bg
+                    
+                    chestCache[obj] = bg
+                end
+            end
+        end
+        for obj, gui in pairs(chestCache) do
+            if not obj or not obj.Parent then
+                if gui then gui:Destroy() end
+                chestCache[obj] = nil
+            else
+                gui.Enabled = chestespenabled
+            end
+        end
+    end)
+end
+
 RunService.RenderStepped:Connect(function()
-    -- Camera FOV Adjuster Loop
     if fovadjustenabled then
         Camera.FieldOfView = customCameraFOV
     end
@@ -1242,4 +1376,6 @@ RunService.RenderStepped:Connect(function()
             updatePlayerESP(p)
         end
     end
+
+    scanBloxFruitsItems()
 end)
