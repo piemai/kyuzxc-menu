@@ -1,4 +1,4 @@
---// Kyuzxc Simple Mod Menu (iPad Edition + Fixed Toggle Functions & Categorized Tabs)
+--// Kyuzxc Simple Mod Menu (iPad Edition + Fully Fixed Movement & Combat Functions)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -40,8 +40,8 @@ local boxenabled = true
 local skeletonenabled = true
 local tracerenabled = true
 local showdist = true
-local noclipped = false -- Fixed default state
-local infjumpenabled = false -- Fixed default state
+local noclipped = false
+local infjumpenabled = false
 local speedenabled = false
 local customWalkSpeed = 50
 local flyenabled = false
@@ -59,7 +59,7 @@ local teamColor = Color3.fromRGB(0, 255, 120)  -- Green (Team)
 local enemyColor = Color3.fromRGB(255, 75, 75) -- Red (Enemy)
 local accentColor = Color3.fromRGB(0, 255, 128)
 
---// Floating Draggable Mobile Aimbot Toggle Button (Center Default)
+--// Floating Draggable Mobile Aimbot Toggle Button
 local mobileGui = Instance.new("ScreenGui")
 mobileGui.Name = "KyuzxcMobileAimBtn"
 mobileGui.ResetOnSpawn = false
@@ -716,31 +716,67 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
+--// Fully Fixed Movement Loop (Handles Noclip, Speed, Godmode, Fly properly)
 RunService.Stepped:Connect(function()
     local char = player.Character
     if char then
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        
+        -- Noclip Logic
         if noclipped then
             for _, part in ipairs(char:GetDescendants()) do
                 if part:IsA("BasePart") then part.CanCollide = false end
             end
         end
         
-        local humanoid = char:FindFirstChildOfClass("Humanoid")
+        -- Speed Hack Logic
         if humanoid then
             if speedenabled then
                 humanoid.WalkSpeed = customWalkSpeed
-            elseif humanoid.WalkSpeed == customWalkSpeed and not speedenabled then
+            else
                 humanoid.WalkSpeed = 16
             end
             
+            -- God Mode Logic
             if godmodeenabled then
                 humanoid.Health = humanoid.MaxHealth
             end
         end
         
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        if hrp and flyenabled then
-            hrp.Velocity = Vector3.new(hrp.Velocity.X, 1, hrp.Velocity.Z)
+        -- Fly Logic
+        if hrp then
+            local bv = hrp:FindFirstChild("KyuzxcFlyBodyVelocity")
+            local bg = hrp:FindFirstChild("KyuzxcFlyBodyGyro")
+            
+            if flyenabled then
+                if not bv then
+                    bv = Instance.new("BodyVelocity")
+                    bv.Name = "KyuzxcFlyBodyVelocity"
+                    bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+                    bv.Velocity = Vector3.new(0, 0, 0)
+                    bv.Parent = hrp
+                end
+                if not bg then
+                    bg = Instance.new("BodyGyro")
+                    bg.Name = "KyuzxcFlyBodyGyro"
+                    bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+                    bg.CFrame = Camera.CFrame
+                    bg.Parent = hrp
+                end
+                
+                bg.CFrame = Camera.CFrame
+                local moveDir = Vector3.new(0, 0, 0)
+                if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + Camera.CFrame.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - Camera.CFrame.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - Camera.CFrame.RightVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + Camera.CFrame.RightVector end
+                
+                bv.Velocity = moveDir * 50
+            else
+                if bv then bv:Destroy() end
+                if bg then bg:Destroy() end
+            end
         end
     end
 end)
@@ -1013,7 +1049,7 @@ local function updatePlayerESP(p)
                             skel[boneKey].BackgroundColor3 = activeColor
                             skel[boneKey].Size = UDim2.new(0, dist, 0, 1.5)
                             skel[boneKey].Position = UDim2.new(0, (p1.X + p2.X) / 2, 0, (p1.Y + p2.Y) / 2)
-    skel[boneKey].Rotation = math.deg(math.atan2(p2.Y - p1.Y, p2.X - p1.X))
+                            skel[boneKey].Rotation = math.deg(math.atan2(p2.Y - p1.Y, p2.X - p1.X))
                             skel[boneKey].Visible = true
                             return
                         end
