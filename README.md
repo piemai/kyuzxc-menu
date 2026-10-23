@@ -1,18 +1,37 @@
-# Kyuzxc Simple Mod Menu
+# Kyuzxc Simple Mod Menu (iPad Edition + Mobile)
 
-> **Disclaimer:** *For educational purposes only. I made this with the assistance of AI, and this is my very first project.*
+A feature-packed, lightweight Roblox mod menu built with a clean **Violet Sidebar** layout, designed specifically for mobile and iPad executors.
 
-Personal Roblox mod menu featuring custom 2D Box ESP, Skeleton, Tracers, Team/Enemy colors, and movement modifications.
+## 🚀 Features & Categories
 
-## How to Execute
+### 1. Movement
+* **Noclip:** Walk through walls and solid objects.
+* **Infinite Jump:** Jump infinitely in mid-air.
+* **Speed Hack & Value:** Boost your walk speed to your preferred value.
+* **Fly:** Smooth flight controls using your movement keys/joystick.
+* **God Mode:** Keep your health filled automatically.
 
-Copy and paste this loadstring into your executor (e.g., Delta):
+### 2. Visuals
+* **Team & Enemy ESP:** Color-coded tracking (Green for teammates, Red for enemies).
+* **ESP Elements:** Toggle Names, 2D Boxes, Skeletons, Tracers, and Distance Tags.
+* **Max ESP Distance:** Set a custom stud radius limit to prevent lag and frozen UI elements.
 
-Features
-Movement & Combat: Noclip, Infinite Jump, Speed Hack, Fly, God Mode.
+### 3. Combat
+* **Mobile Aimbot Button:** A draggable on-screen floating toggle button designed for iPad/touch screens.
+* **Aim Part Selector:** Target the **Head**, **UpperTorso**, or **HumanoidRootPart**.
+* **Aim Smoothness:** Choose between Hard (Instant), Medium (Balanced), and Low (Smooth).
+* **FOV Circle & Value:** Adjustable Field-of-View visualizer circle.
 
-Visuals: Team/Enemy ESP (Green/Red toggles), 2D Bounding Boxes, Skeletons, Center Tracers, Distance Tags.
+### 4. Teleport
+* **Player Dropdown:** Select any player from the active server list.
+* **Refresh List:** Update the player list dynamically when users join or leave.
+* **Teleport to Target:** Instant teleportation via button click or the **[T]** keybind.
 
-Teleportation: Quick player list dropdown and target teleport.
+---
 
-loadstring(game:HttpGet("[https://raw.githubusercontent.com/piemai/kyuzxc-menu/refs/heads/main/menu.lua](https://raw.githubusercontent.com/piemai/kyuzxc-menu/refs/heads/main/menu.lua)"))()
+## 💻 How to Use (Loadstring)
+
+Copy and paste the following loadstring command into your Roblox executor:
+
+```lua
+loadstring(game:HttpGet("YOUR_RAW_GITHUB_LINK_HERE"))()
