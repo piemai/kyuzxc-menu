@@ -1,4 +1,4 @@
---// Kyuzxc Simple Mod Menu (iPad Edition + Fully Fixed Movement & Combat Functions)
+--// Kyuzxc Simple Mod Menu (iPad Edition + Fully Fixed Inf Jump & Speed Hack)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -655,11 +655,23 @@ catMovement:CreateTab("noclip", {enabled = false}, function(tog)
         end
     end
 end)
-catMovement:CreateTab("inf jump", {enabled = false}, function(tog) infjumpenabled = tog end) 
-catMovement:CreateTab("speed hack", {enabled = false}, function(tog) speedenabled = tog end)
+catMovement:CreateTab("inf jump", {enabled = false}, function(tog) 
+    infjumpenabled = tog 
+end) 
+catMovement:CreateTab("speed hack", {enabled = false}, function(tog) 
+    speedenabled = tog 
+    if not tog and player.Character then
+        local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then humanoid.WalkSpeed = 16 end
+    end
+end)
 catMovement:CreateTab("speed value", {isSpeedInput = true})
-catMovement:CreateTab("fly", {enabled = false}, function(tog) flyenabled = tog end)
-catMovement:CreateTab("god mode", {enabled = false}, function(tog) godmodeenabled = tog end)
+catMovement:CreateTab("fly", {enabled = false}, function(tog) 
+    flyenabled = tog 
+end)
+catMovement:CreateTab("god mode", {enabled = false}, function(tog) 
+    godmodeenabled = tog 
+end)
 
 --// Category 2: Visuals
 local catVisuals = Window:CreateCategory("Visuals")
@@ -704,6 +716,7 @@ UserInputService.InputBegan:Connect(function(input, gp)
     end
 end)
 
+--// Fixed Infinite Jump Event for Mobile & PC
 UserInputService.JumpRequest:Connect(function()
     if infjumpenabled then
         local char = player.Character
@@ -716,7 +729,7 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
---// Fully Fixed Movement Loop (Handles Noclip, Speed, Godmode, Fly properly)
+--// Fully Fixed Movement Loop (Noclip, Speed Hack, Fly, God Mode)
 RunService.Stepped:Connect(function()
     local char = player.Character
     if char then
@@ -730,15 +743,12 @@ RunService.Stepped:Connect(function()
             end
         end
         
-        -- Speed Hack Logic
+        -- Speed Hack & God Mode Logic
         if humanoid then
             if speedenabled then
                 humanoid.WalkSpeed = customWalkSpeed
-            else
-                humanoid.WalkSpeed = 16
             end
             
-            -- God Mode Logic
             if godmodeenabled then
                 humanoid.Health = humanoid.MaxHealth
             end
@@ -1050,6 +1060,7 @@ local function updatePlayerESP(p)
                             skel[boneKey].Size = UDim2.new(0, dist, 0, 1.5)
                             skel[boneKey].Position = UDim2.new(0, (p1.X + p2.X) / 2, 0, (p1.Y + p2.Y) / 2)
                             skel[boneKey].Rotation = math.deg(math.atan2(p2.Y - p1.Y, p2.X - p1.X))
+                            skel[boneKey].Speed = true
                             skel[boneKey].Visible = true
                             return
                         end
