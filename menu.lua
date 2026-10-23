@@ -69,6 +69,18 @@ local targetPartOption = "Head"
 local aimbotSmoothing = 0.3
 local selectedTargetPlayer = nil
 
+-- New Extended States
+local panicEnabled = false
+local healthBarEnabled = true
+local chamsEnabled = false
+local offscreenArrowsEnabled = false
+local autoClickerEnabled = false
+local autoClickerInterval = 0.1
+local antiVoidEnabled = false
+local viewmodelFovValue = 70
+local silentAimEnabled = false
+local triggerBotEnabled = false
+
 --// POV, Camera & Extra Visual States
 local povenabled = false
 local cameraFovValue = 90
@@ -1040,6 +1052,10 @@ end)
 catMovement:CreateTab("fly speed", {isSlider = true, min = 20, max = 250, default = 60, step = 5}, function(val)
     customFlySpeed = val
 end)
+catMovement:CreateTab("anti-void protection", {enabled = false}, function(tog)
+    antiVoidEnabled = tog
+    notify("Anti-Void Protection: " .. (tog and "ON" or "OFF"))
+end)
 
 --// Category 2: Visuals
 local catVisuals = Window:CreateCategory("Visuals")
@@ -1047,10 +1063,16 @@ catVisuals:CreateTab("esp team (green)", {enabled = true}, function(tog) showtea
 catVisuals:CreateTab("esp enemy (red)", {enabled = true}, function(tog) showenemy = tog end)
 catVisuals:CreateTab("esp names", {enabled = true}, function(tog) espenabled = tog end)
 catVisuals:CreateTab("esp boxes", {enabled = true}, function(tog) boxenabled = tog end)
+catVisuals:CreateTab("esp health bar", {enabled = true}, function(tog) healthBarEnabled = tog end)
 catVisuals:CreateTab("esp skeleton", {enabled = true}, function(tog) skeletonenabled = tog end)
 catVisuals:CreateTab("esp tracers", {enabled = true}, function(tog) tracerenabled = tog end)
+catVisuals:CreateTab("off-screen arrows", {enabled = false}, function(tog) offscreenArrowsEnabled = tog end)
 catVisuals:CreateTab("distance tags", {enabled = true}, function(tog) showdist = tog end)
 catVisuals:CreateTab("max esp distance", {isMaxDistInput = true})
+catVisuals:CreateTab("chams / material glow", {enabled = false}, function(tog)
+    chamsEnabled = tog
+    notify("Chams Glow: " .. (tog and "ON" or "OFF"))
+end)
 catVisuals:CreateTab("center crosshair", {enabled = false}, function(tog) crosshairEnabled = tog end)
 catVisuals:CreateTab("fullbright (no fog)", {enabled = false}, function(tog)
     fullbrightEnabled = tog
@@ -1081,6 +1103,14 @@ catCombat:CreateTab("aimbot button", {enabled = false}, function(tog)
 end)
 catCombat:CreateTab("aim part", {isPartDropdown = true})
 catCombat:CreateTab("aim smoothness", {isSmoothDropdown = true})
+catCombat:CreateTab("silent aim", {enabled = false}, function(tog)
+    silentAimEnabled = tog
+    notify("Silent Aim: " .. (tog and "ON" or "OFF"))
+end)
+catCombat:CreateTab("triggerbot", {enabled = false}, function(tog)
+    triggerBotEnabled = tog
+    notify("Triggerbot: " .. (tog and "ON" or "OFF"))
+end)
 catCombat:CreateTab("fov circle", {enabled = false}, function(tog) fovcircleenabled = tog end)
 catCombat:CreateTab("fov value", {isFovInput = true})
 catCombat:CreateTab("hitbox expander", {enabled = false}, function(tog)
@@ -1166,8 +1196,16 @@ end)
 catMisc:CreateTab("spin speed", {isSlider = true, min = 10, max = 100, default = 35, step = 5}, function(val)
     spinSpeed = val
 end)
+catMisc:CreateTab("auto-clicker loop", {enabled = false}, function(tog)
+    autoClickerEnabled = tog
+    notify("Auto-Clicker: " .. (tog and "ON" or "OFF"))
+end)
 catMisc:CreateTab("anti-afk (no idle kick)", {enabled = true}, function(tog)
     antiafkenabled = tog
+end)
+catMisc:CreateTab("panic button [Delete]", {enabled = false}, function(tog)
+    panicEnabled = tog
+    notify("Panic Mode: " .. (tog and "ON (Hiding UI & Functions)" or "OFF"))
 end)
 catMisc:CreateTab("rejoin current server", {isButton = true}, function()
     notify("Rejoining current server...")
@@ -1178,9 +1216,25 @@ catMisc:CreateTab("server hop (new server)", {isButton = true}, function()
 end)
 
 Library:Load()
-notify("kyuzxc menu v2.5 loaded successfully!")
+notify("kyuzxc menu v2.7 (Extended) loaded successfully!")
 
 UserInputService.InputBegan:Connect(function(input, gp)
+    if input.KeyCode == Enum.KeyCode.Delete then
+        panicEnabled = not panicEnabled
+        if panicEnabled then
+            if uiParent:FindFirstChild("KyuzxcModMenu") then uiParent.KyuzxcModMenu.Enabled = false end
+            if uiParent:FindFirstChild("KyuzxcVisualsGui") then uiParent.KyuzxcVisualsGui.Enabled = false end
+            if uiParent:FindFirstChild("KyuzxcMobileAimBtn") then uiParent.KyuzxcMobileAimBtn.Enabled = false end
+            notify("PANIC ACTIVATED: Menu and visuals hidden!")
+        else
+            if uiParent:FindFirstChild("KyuzxcModMenu") then uiParent.KyuzxcModMenu.Enabled = true end
+            if uiParent:FindFirstChild("KyuzxcVisualsGui") then uiParent.KyuzxcVisualsGui.Enabled = true end
+            if uiParent:FindFirstChild("KyuzxcMobileAimBtn") then uiParent.KyuzxcMobileAimBtn.Enabled = true end
+            notify("PANIC DEACTIVATED: Restored UI.")
+        end
+        return
+    end
+
     if gp then return end
     if input.KeyCode == Enum.KeyCode.T then
         teleportToTarget()
@@ -1206,7 +1260,23 @@ local function isPlayerTeammate(p)
     return false
 end
 
+-- Auto-Clicker Background Loop
+task.spawn(function()
+    while true do
+        task.wait(autoClickerInterval)
+        if autoClickerEnabled and not panicEnabled then
+            pcall(function()
+                VirtualUser:Button1Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+                task.wait(0.05)
+                VirtualUser:Button1Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+            end)
+        end
+    end
+end)
+
 RunService.Stepped:Connect(function()
+    if panicEnabled then return end
+
     if gravityenabled then
         workspace.Gravity = customGravity
     end
@@ -1215,6 +1285,12 @@ RunService.Stepped:Connect(function()
     if char then
         local humanoid = char:FindFirstChildOfClass("Humanoid")
         local hrp = char:FindFirstChild("HumanoidRootPart")
+
+        -- Anti-Void Check
+        if antiVoidEnabled and hrp and hrp.Position.Y < -50 then
+            hrp.CFrame = hrp.CFrame + Vector3.new(0, 100, 0)
+            notify("Anti-Void triggered: Saved from falling!")
+        end
         
         if noclipped then
             for _, part in ipairs(char:GetDescendants()) do
@@ -1275,13 +1351,11 @@ RunService.Stepped:Connect(function()
                 bg.CFrame = Camera.CFrame
                 local moveDir = Vector3.new(0, 0, 0)
                 
-                -- Keyboard Controls (PC)
                 if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + Camera.CFrame.LookVector end
                 if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - Camera.CFrame.LookVector end
                 if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - Camera.CFrame.RightVector end
                 if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + Camera.CFrame.RightVector end
                 
-                -- Touch Thumbstick Support (iPad / Mobile)
                 if moveDir.Magnitude == 0 and humanoid and humanoid.MoveDirection.Magnitude > 0 then
                     local camRight = Camera.CFrame.RightVector
                     local flatRight = Vector3.new(camRight.X, 0, camRight.Z).Unit
@@ -1299,19 +1373,29 @@ RunService.Stepped:Connect(function()
         end
     end
 
-    --// Hitbox Expander Loop
-    if hitboxenabled then
+    --// Hitbox Expander & Chams Loop
+    if hitboxenabled or chamsEnabled then
         for _, p in ipairs(Players:GetPlayers()) do
             if p ~= player and not isPlayerTeammate(p) and p.Character then
                 local enemyHrp = p.Character:FindFirstChild("HumanoidRootPart")
                 local enemyHum = p.Character:FindFirstChildOfClass("Humanoid")
                 if enemyHrp and enemyHum and enemyHum.Health > 0 then
                     pcall(function()
-                        enemyHrp.Size = Vector3.new(hitboxSize, hitboxSize, hitboxSize)
-                        enemyHrp.Transparency = 0.65
-                        enemyHrp.Color = accentColor
-                        enemyHrp.Material = Enum.Material.Neon
-                        enemyHrp.CanCollide = false
+                        if hitboxenabled then
+                            enemyHrp.Size = Vector3.new(hitboxSize, hitboxSize, hitboxSize)
+                            enemyHrp.Transparency = 0.65
+                            enemyHrp.Color = accentColor
+                            enemyHrp.Material = Enum.Material.Neon
+                            enemyHrp.CanCollide = false
+                        end
+                        if chamsEnabled then
+                            for _, part in ipairs(p.Character:GetDescendants()) do
+                                if part:IsA("BasePart") then
+                                    part.Material = Enum.Material.Neon
+                                    part.Color = enemyColor
+                                end
+                            end
+                        end
                     end)
                 end
             end
@@ -1417,6 +1501,8 @@ local function removeESP(p)
             if espCache[p].BoxBottom then espCache[p].BoxBottom:Destroy() end
             if espCache[p].BoxLeft then espCache[p].BoxLeft:Destroy() end
             if espCache[p].BoxRight then espCache[p].BoxRight:Destroy() end
+            if espCache[p].HealthBarBg then espCache[p].HealthBarBg:Destroy() end
+            if espCache[p].HealthBarFill then espCache[p].HealthBarFill:Destroy() end
             if espCache[p].SkeletonHolder then espCache[p].SkeletonHolder:Destroy() end
         end)
         espCache[p] = nil
@@ -1431,6 +1517,8 @@ local function hideESP(cache)
     if cache.BoxBottom then cache.BoxBottom.Visible = false end
     if cache.BoxLeft then cache.BoxLeft.Visible = false end
     if cache.BoxRight then cache.BoxRight.Visible = false end
+    if cache.HealthBarBg then cache.HealthBarBg.Visible = false end
+    if cache.HealthBarFill then cache.HealthBarFill.Visible = false end
     if cache.SkeletonLines then
         for _, line in pairs(cache.SkeletonLines) do
             line.Visible = false
@@ -1505,6 +1593,21 @@ local function updatePlayerESP(p)
         espCache[p].BoxBottom = createLine()
         espCache[p].BoxLeft = createLine()
         espCache[p].BoxRight = createLine()
+
+        local hbBg = Instance.new("Frame")
+        hbBg.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        hbBg.BorderSizePixel = 0
+        hbBg.Visible = false
+        hbBg.Parent = visualGui
+
+        local hbFill = Instance.new("Frame")
+        hbFill.BackgroundColor3 = Color3.fromRGB(0, 255, 100)
+        hbFill.BorderSizePixel = 0
+        hbFill.Visible = false
+        hbFill.Parent = visualGui
+
+        espCache[p].HealthBarBg = hbBg
+        espCache[p].HealthBarFill = hbFill
 
         local skFolder = Instance.new("Folder")
         skFolder.Name = "SkeletonFolder"
@@ -1592,6 +1695,29 @@ local function updatePlayerESP(p)
 
                 cache.BoxRight.Size = UDim2.new(0, 1.5, 0, boxSizeY)
                 cache.BoxRight.Position = UDim2.new(0, centerX + (boxSizeX / 2), 0, centerY)
+
+                -- Health Bar rendering
+                if cache.HealthBarBg and cache.HealthBarFill then
+                    cache.HealthBarBg.Visible = healthBarEnabled
+                    cache.HealthBarFill.Visible = healthBarEnabled
+                    if healthBarEnabled then
+                        local hpPercent = math.clamp(humanoid.Health / humanoid.MaxHealth, 0, 1)
+                        local barH = boxSizeY
+                        local barW = 3
+                        local barX = centerX - (boxSizeX / 2) - 6
+                        local barY = centerY
+
+                        cache.HealthBarBg.Size = UDim2.new(0, barW, 0, barH)
+                        cache.HealthBarBg.Position = UDim2.new(0, barX, 0, barY)
+
+                        local fillH = barH * hpPercent
+                        cache.HealthBarFill.Size = UDim2.new(0, barW, 0, fillH)
+                        cache.HealthBarFill.Position = UDim2.new(0, barX, 0, barY + (barH / 2) - (fillH / 2))
+                    end
+                end
+            else
+                if cache.HealthBarBg then cache.HealthBarBg.Visible = false end
+                if cache.HealthBarFill then cache.HealthBarFill.Visible = false end
             end
         end
 
@@ -1650,6 +1776,8 @@ local function updatePlayerESP(p)
 end
 
 RunService.RenderStepped:Connect(function()
+    if panicEnabled then return end
+
     Camera = workspace.CurrentCamera
     local myChar = player.Character
     local myHum = myChar and myChar:FindFirstChildOfClass("Humanoid")
@@ -1709,7 +1837,7 @@ RunService.RenderStepped:Connect(function()
         fovCircle.Position = UDim2.new(0, Camera.ViewportSize.X / 2, 0, Camera.ViewportSize.Y / 2)
     end
 
-    --// 6. Aimbot Update
+    --// 6. Aimbot & Triggerbot Update
     if aimbotenabled and aimbotactive and Camera then
         local targetPart = getClosestPlayerInFOV()
         if targetPart then
@@ -1719,6 +1847,28 @@ RunService.RenderStepped:Connect(function()
                 Camera.CFrame = targetCFrame
             else
                 Camera.CFrame = currentCFrame:Lerp(targetCFrame, 1 - aimbotSmoothing)
+            end
+        end
+    end
+
+    if triggerBotEnabled and Camera then
+        local mousePos = UserInputService:GetMouseLocation()
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= player and not isPlayerTeammate(p) and p.Character then
+                local head = p.Character:FindFirstChild("Head")
+                if head then
+                    local screenPos, onScreen = Camera:WorldToViewportPoint(head.Position)
+                    if onScreen then
+                        local dist = (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude
+                        if dist < 20 then
+                            pcall(function()
+                                VirtualUser:Button1Down(Vector2.new(0,0), Camera.CFrame)
+                                task.wait(0.05)
+                                VirtualUser:Button1Up(Vector2.new(0,0), Camera.CFrame)
+                            end)
+                        end
+                    end
+                end
             end
         end
     end
