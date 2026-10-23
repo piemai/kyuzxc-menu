@@ -1,4 +1,4 @@
-# Kyuzxc Simple Mod Menu (iPad Edition + Mobile)
+# Kyuzxc Simple Mod Menu Roblox (iPad Edition + Mobile)
 
 A feature-packed, lightweight Roblox mod menu built with a clean **Violet Sidebar** layout, designed specifically for mobile and iPad executors.
 
