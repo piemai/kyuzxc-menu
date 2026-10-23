@@ -1,11 +1,10 @@
---// Kyuzxc Simple Mod Menu (Blox Fruits Edition + Fruits/Chest ESP, Walk on Water & Auto-Farm)
+--// Kyuzxc Simple Mod Menu (iPad Edition + Resizable, Responsive Violet Sidebar & Fully Working Functions)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
 local StarterGui = game:GetService("StarterGui")
-local Workspace = game:GetService("Workspace")
-local Camera = Workspace.CurrentCamera
+local Camera = workspace.CurrentCamera
 
 local player = Players.LocalPlayer
 local uiParent = (gethui and gethui()) or CoreGui
@@ -26,7 +25,7 @@ local function notify(msg)
     print("[Kyuzxc] " .. msg)
     pcall(function()
         StarterGui:SetCore("SendNotification", {
-            Title = "Kyuzxc Blox Fruits",
+            Title = "Kyuzxc Menu",
             Text = msg,
             Duration = 3
         })
@@ -42,19 +41,12 @@ local skeletonenabled = true
 local tracerenabled = true
 local showdist = true
 local maxEspDistance = 300
-local fruitespenabled = false
-local chestespenabled = false
 local noclipped = false
 local infjumpenabled = false
 local speedenabled = false
 local customWalkSpeed = 50
 local flyenabled = false
-local walkonwaterenabled = false
-local infstaminaenabled = false
-local autoclickerenabled = false
-local autofarmenabled = false
-local fovadjustenabled = false
-local customCameraFOV = 90
+local godmodeenabled = false
 local fovcircleenabled = false
 local fovradius = 120
 local aimbotenabled = false
@@ -66,8 +58,6 @@ local selectedTargetPlayer = nil
 --// ESP Colors & Violet Theme
 local teamColor = Color3.fromRGB(0, 255, 120)  -- Green (Team)
 local enemyColor = Color3.fromRGB(255, 75, 75) -- Red (Enemy)
-local fruitColor = Color3.fromRGB(255, 215, 0)   -- Gold/Yellow (Fruit)
-local chestColor = Color3.fromRGB(0, 191, 255)   -- Deep Sky Blue (Chest)
 local accentColor = Color3.fromRGB(165, 95, 255) -- Violet Accent
 
 --// Floating Draggable Mobile Aimbot Toggle Button
@@ -194,7 +184,6 @@ function Library:CreateWindow(title)
                 IsSpeedInput = config and config.isSpeedInput or false,
                 IsFovInput = config and config.isFovInput or false,
                 IsMaxDistInput = config and config.isMaxDistInput or false,
-                IsCamFovInput = config and config.isCamFovInput or false,
                 IsPartDropdown = config and config.isPartDropdown or false,
                 IsSmoothDropdown = config and config.isSmoothDropdown or false
             })
@@ -296,7 +285,7 @@ function Library:Load()
         minCorner.CornerRadius = UDim.new(0, 6)
         minCorner.Parent = minBtn
 
-        --// Sidebar Navigation (Kaliwa)
+        --// Sidebar Navigation (Kaliwa - Responsive Size)
         local sidebar = Instance.new("ScrollingFrame")
         sidebar.Size = UDim2.new(0, 120, 1, -54)
         sidebar.Position = UDim2.new(0, 8, 0, 48)
@@ -323,7 +312,7 @@ function Library:Load()
         sidePadding.PaddingRight = UDim.new(0, 6)
         sidePadding.Parent = sidebar
         
-        --// Content Container (Kanan)
+        --// Content Container (Kanan - Responsive)
         local contentContainer = Instance.new("ScrollingFrame")
         contentContainer.Size = UDim2.new(1, -140, 1, -54)
         contentContainer.Position = UDim2.new(0, 134, 0, 48)
@@ -340,7 +329,7 @@ function Library:Load()
         contentLayout.Padding = UDim.new(0, 6)
         contentLayout.Parent = contentContainer
 
-        --// Resize Grip
+        --// Resize Grip (Pang-resize ng Menu sa Ipad/PC)
         local resizeGrip = Instance.new("TextButton")
         resizeGrip.Name = "ResizeGrip"
         resizeGrip.Size = UDim2.fromOffset(20, 20)
@@ -420,17 +409,15 @@ function Library:Load()
                     togButton.BackgroundColor3 = Color3.fromRGB(0, 130, 220)
                     togButton.TextColor3 = Color3.fromRGB(255, 255, 255)
                     togButton.Text = tab.Name
-                elseif tab.IsSpeedInput or tab.IsFovInput or tab.IsMaxDistInput or tab.IsCamFovInput then
+                elseif tab.IsSpeedInput or tab.IsFovInput or tab.IsMaxDistInput then
                     togButton.BackgroundColor3 = Color3.fromRGB(38, 29, 57)
                     togButton.TextColor3 = Color3.fromRGB(200, 200, 200)
                     if tab.IsSpeedInput then
                         togButton.Text = "  Speed Value:"
                     elseif tab.IsFovInput then
-                        togButton.Text = "  Aim FOV Radius:"
-                    elseif tab.IsMaxDistInput then
+                        togButton.Text = "  FOV Radius:"
+                    else
                         togButton.Text = "  Max ESP Dist:"
-                    elseif tab.IsCamFovInput then
-                        togButton.Text = "  Camera FOV:"
                     end
                     togButton.TextXAlignment = Enum.TextXAlignment.Left
                     
@@ -443,10 +430,8 @@ function Library:Load()
                         textBox.Text = tostring(customWalkSpeed)
                     elseif tab.IsFovInput then
                         textBox.Text = tostring(fovradius)
-                    elseif tab.IsMaxDistInput then
+                    else
                         textBox.Text = tostring(maxEspDistance)
-                    elseif tab.IsCamFovInput then
-                        textBox.Text = tostring(customCameraFOV)
                     end
                     textBox.Font = Enum.Font.GothamBold
                     textBox.TextSize = 11
@@ -464,13 +449,10 @@ function Library:Load()
                                 notify("WalkSpeed set to: " .. num)
                             elseif tab.IsFovInput then
                                 fovradius = num
-                                notify("Aim FOV set to: " .. num)
-                            elseif tab.IsMaxDistInput then
+                                notify("FOV Radius set to: " .. num)
+                            else
                                 maxEspDistance = num
-                                notify("Max ESP Dist set to: " .. num)
-                            elseif tab.IsCamFovInput then
-                                customCameraFOV = math.clamp(num, 10, 120)
-                                notify("Camera FOV set to: " .. customCameraFOV)
+                                notify("Max ESP Distance set to: " .. num)
                             end
                             textBox.Text = tostring(num)
                         else
@@ -478,10 +460,8 @@ function Library:Load()
                                 textBox.Text = tostring(customWalkSpeed)
                             elseif tab.IsFovInput then
                                 textBox.Text = tostring(fovradius)
-                            elseif tab.IsMaxDistInput then
+                            else
                                 textBox.Text = tostring(maxEspDistance)
-                            elseif tab.IsCamFovInput then
-                                textBox.Text = tostring(customCameraFOV)
                             end
                         end
                     end)
@@ -684,13 +664,13 @@ function Library:Load()
                     togButton.TextXAlignment = Enum.TextXAlignment.Left
                 end
                 
-                if not tab.IsSpeedInput and not tab.IsFovInput and not tab.IsMaxDistInput and not tab.IsCamFovInput and not tab.IsScrollingDropdown and not tab.IsPartDropdown and not tab.IsSmoothDropdown and not tab.IsButton then
+                if not tab.IsSpeedInput and not tab.IsFovInput and not tab.IsMaxDistInput and not tab.IsScrollingDropdown and not tab.IsPartDropdown and not tab.IsSmoothDropdown and not tab.IsButton then
                     local pad = Instance.new("UIPadding")
                     pad.PaddingLeft = UDim.new(0, 6)
                     pad.Parent = togButton
                 end
 
-                if not tab.IsSpeedInput and not tab.IsFovInput and not tab.IsMaxDistInput and not tab.IsCamFovInput then
+                if not tab.IsSpeedInput and not tab.IsFovInput and not tab.IsMaxDistInput then
                     togButton.Font = Enum.Font.GothamBold
                     togButton.TextSize = 11
                 end
@@ -701,7 +681,7 @@ function Library:Load()
                 corner.Parent = togButton
                 
                 local currentState = tab.State
-                if not tab.IsButton and not tab.IsScrollingDropdown and not tab.IsPartDropdown and not tab.IsSmoothDropdown and not tab.IsSpeedInput and not tab.IsFovInput and not tab.IsMaxDistInput and not tab.IsCamFovInput then
+                if not tab.IsButton and not tab.IsScrollingDropdown and not tab.IsPartDropdown and not tab.IsSmoothDropdown and not tab.IsSpeedInput and not tab.IsFovInput and not tab.IsMaxDistInput then
                     togButton.MouseButton1Click:Connect(function()
                         currentState = not currentState
                         togButton.Text = "  " .. tab.Name .. " : " .. (currentState and "ON" or "OFF")
@@ -760,7 +740,7 @@ function Library:Load()
     end
 end
 
-local Window = Library:CreateWindow("kyuzxc blox fruits [ipad]")
+local Window = Library:CreateWindow("kyuzxc simple mod menu [ipad]")
 
 --// Category 1: Movement
 local catMovement = Window:CreateCategory("Movement")
@@ -786,14 +766,11 @@ catMovement:CreateTab("speed value", {isSpeedInput = true})
 catMovement:CreateTab("fly", {enabled = false}, function(tog) 
     flyenabled = tog 
 end)
-catMovement:CreateTab("walk on water", {enabled = false}, function(tog) 
-    walkonwaterenabled = tog 
-end)
-catMovement:CreateTab("infinite stamina", {enabled = false}, function(tog) 
-    infstaminaenabled = tog 
+catMovement:CreateTab("god mode", {enabled = false}, function(tog) 
+    godmodeenabled = tog 
 end)
 
---// Category 2: Visuals (ESP + Fruits & Chests)
+--// Category 2: Visuals
 local catVisuals = Window:CreateCategory("Visuals")
 catVisuals:CreateTab("esp team (green)", {enabled = true}, function(tog) showteam = tog end)
 catVisuals:CreateTab("esp enemy (red)", {enabled = true}, function(tog) showenemy = tog end)
@@ -802,11 +779,9 @@ catVisuals:CreateTab("esp boxes", {enabled = true}, function(tog) boxenabled = t
 catVisuals:CreateTab("esp skeleton", {enabled = true}, function(tog) skeletonenabled = tog end)
 catVisuals:CreateTab("esp tracers", {enabled = true}, function(tog) tracerenabled = tog end)
 catVisuals:CreateTab("distance tags", {enabled = true}, function(tog) showdist = tog end)
-catVisuals:CreateTab("fruit esp (gold)", {enabled = false}, function(tog) fruitespenabled = tog end)
-catVisuals:CreateTab("chest esp (blue)", {enabled = false}, function(tog) chestespenabled = tog end)
 catVisuals:CreateTab("max esp distance", {isMaxDistInput = true})
 
---// Category 3: Combat & Farming
+--// Category 3: Combat (Aimbot & FOV)
 local catCombat = Window:CreateCategory("Combat")
 catCombat:CreateTab("aimbot button", {enabled = false}, function(tog) 
     aimbotenabled = tog 
@@ -819,18 +794,10 @@ catCombat:CreateTab("aimbot button", {enabled = false}, function(tog)
         aimToggleButton.Text = "AIM: OFF"
     end
 end)
-catCombat:CreateTab("auto-clicker / fast attack", {enabled = false}, function(tog) 
-    autoclickerenabled = tog 
-end)
-catCombat:CreateTab("auto-farm nearest npc", {enabled = false}, function(tog) 
-    autofarmenabled = tog 
-end)
 catCombat:CreateTab("aim part", {isPartDropdown = true})
 catCombat:CreateTab("aim smoothness", {isSmoothDropdown = true})
-catCombat:CreateTab("aim fov circle", {enabled = false}, function(tog) fovcircleenabled = tog end)
-catCombat:CreateTab("aim fov value", {isFovInput = true})
-catCombat:CreateTab("camera fov", {enabled = false}, function(tog) fovadjustenabled = tog end)
-catCombat:CreateTab("camera fov value", {isCamFovInput = true})
+catCombat:CreateTab("fov circle", {enabled = false}, function(tog) fovcircleenabled = tog end)
+catCombat:CreateTab("fov value", {isFovInput = true})
 
 --// Category 4: Teleport
 local catTeleport = Window:CreateCategory("Teleport")
@@ -838,7 +805,7 @@ catTeleport:CreateTab("select player", {isScrollingDropdown = true})
 catTeleport:CreateTab("teleport to target [T]", {isButton = true}, function() teleportToTarget() end)
 
 Library:Load()
-notify("kyuzxc blox fruits menu loaded!")
+notify("kyuzxc menu loaded successfully!")
 
 UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
@@ -859,7 +826,6 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
---// Main Loop (Movement, Walk on Water, Stamina, Auto-Clicker & Auto-Farm)
 RunService.Stepped:Connect(function()
     local char = player.Character
     if char then
@@ -876,64 +842,10 @@ RunService.Stepped:Connect(function()
             if speedenabled then
                 humanoid.WalkSpeed = customWalkSpeed
             end
-        end
-        
-        -- Walk on Water Logic (Solidifies water beneath the player)
-        if walkonwaterenabled and hrp then
-            pcall(function()
-                for _, part in ipairs(Workspace:GetPartsInPart(hrp)) do
-                    local name = string.lower(part.Name)
-                    if string.find(name, "water") or string.find(name, "sea") or part.Material == Enum.Material.Water then
-                        part.CanCollide = true
-                    end
-                end
-            end)
-        end
-        
-        -- Infinite Stamina
-        if infstaminaenabled then
-            pcall(function()
-                for _, obj in ipairs(char:GetDescendants()) do
-                    if obj:IsA("NumberValue") or obj:IsA("IntValue") then
-                        local n = string.lower(obj.Name)
-                        if string.find(n, "stamina") or string.find(n, "energy") or string.find(n, "chi") then
-                            obj.Value = 100
-                        end
-                    end
-                end
-            end)
-        end
-        
-        -- Auto-Clicker / Fast Attack Simulation
-        if autoclickerenabled then
-            pcall(function()
-                local vim = game:GetService("VirtualInputManager")
-                vim:SendMouseButtonEvent(0, 0, 0, true, game, 0)
-                task.wait(0.05)
-                vim:SendMouseButtonEvent(0, 0, 0, false, game, 0)
-            end)
-        end
-        
-        -- Auto-Farm Nearest Enemy/NPC
-        if autofarmenabled and hrp then
-            pcall(function()
-                local closestEnemy = nil
-                local shortestDist = math.huge
-                for _, mob in ipairs(Workspace.Enemies:GetChildren()) do
-                    local mobHrp = mob:FindFirstChild("HumanoidRootPart")
-                    local mobHum = mob:FindFirstChildOfClass("Humanoid")
-                    if mobHrp and mobHum and mobHum.Health > 0 then
-                        local dist = (hrp.Position - mobHrp.Position).Magnitude
-                        if dist < shortestDist then
-                            shortestDist = dist
-                            closestEnemy = mobHrp
-                        end
-                    end
-                end
-                if closestEnemy then
-                    hrp.CFrame = closestEnemy.CFrame + Vector3.new(0, 4, 3)
-                end
-            end)
+            
+            if godmodeenabled then
+                humanoid.Health = humanoid.MaxHealth
+            end
         end
         
         if hrp then
@@ -972,7 +884,7 @@ RunService.Stepped:Connect(function()
     end
 end)
 
---// Visuals: Fruit ESP, Chest ESP, Camera FOV & Player ESP
+--// Visuals: Round FOV Circle & Mobile Aimbot & ESP Drawing
 local visualGui = Instance.new("ScreenGui")
 visualGui.Name = "KyuzxcVisualsGui"
 visualGui.ResetOnSpawn = false
@@ -1033,8 +945,6 @@ local function getClosestPlayerInFOV()
 end
 
 local espCache = {}
-local fruitCache = {}
-local chestCache = {}
 
 local function removeESP(p)
     if espCache[p] then
@@ -1068,10 +978,10 @@ end
 
 Players.PlayerRemoving:Connect(removeESP)
 
-local function createLine(color)
+local function createLine()
     local line = Instance.new("Frame")
     line.AnchorPoint = Vector2.new(0.5, 0.5)
-    line.BackgroundColor3 = color or enemyColor
+    line.BackgroundColor3 = enemyColor
     line.BorderSizePixel = 0
     line.Visible = false
     line.Parent = visualGui
@@ -1095,11 +1005,15 @@ local function updatePlayerESP(p)
     if localHrp then
         local dist = (localHrp.Position - hrp.Position).Magnitude
         if dist > maxEspDistance then
-            if espCache[p] then hideESP(espCache[p]) end
+            if espCache[p] then
+                hideESP(espCache[p])
+            end
             return
         end
     else
-        if espCache[p] then hideESP(espCache[p]) end
+        if espCache[p] then
+            hideESP(espCache[p])
+        end
         return
     end
     
@@ -1124,11 +1038,11 @@ local function updatePlayerESP(p)
         
         espCache[p].Billboard = billboard
         espCache[p].TextLabel = textLabel
-        espCache[p].TracerFrame = createLine(enemyColor)
-        espCache[p].BoxTop = createLine(enemyColor)
-        espCache[p].BoxBottom = createLine(enemyColor)
-        espCache[p].BoxLeft = createLine(enemyColor)
-        espCache[p].BoxRight = createLine(enemyColor)
+        espCache[p].TracerFrame = createLine()
+        espCache[p].BoxTop = createLine()
+        espCache[p].BoxBottom = createLine()
+        espCache[p].BoxLeft = createLine()
+        espCache[p].BoxRight = createLine()
 
         local skFolder = Instance.new("Folder")
         skFolder.Name = "SkeletonFolder"
@@ -1136,11 +1050,11 @@ local function updatePlayerESP(p)
         espCache[p].SkeletonHolder = skFolder
 
         espCache[p].SkeletonLines = {
-            Head_Neck = createLine(enemyColor),
-            Torso_LHand = createLine(enemyColor),
-            Torso_RHand = createLine(enemyColor),
-            Torso_LFoot = createLine(enemyColor),
-            Torso_RFoot = createLine(enemyColor)
+            Head_Neck = createLine(),
+            Torso_LHand = createLine(),
+            Torso_RHand = createLine(),
+            Torso_LFoot = createLine(),
+            Torso_RFoot = createLine()
         }
         for _, line in pairs(espCache[p].SkeletonLines) do line.Parent = skFolder end
     end
@@ -1273,85 +1187,7 @@ local function updatePlayerESP(p)
     end
 end
 
---// Fruit & Chest ESP Scanner Function
-local function scanBloxFruitsItems()
-    pcall(function()
-        -- Fruit ESP
-        for _, obj in ipairs(Workspace:GetDescendants()) do
-            if string.find(string.lower(obj.Name), "fruit") and (obj:IsA("Model") or obj:IsA("Part")) then
-                local rootPart = obj:IsA("Model") and (obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")) or obj
-                if rootPart and not fruitCache[obj] then
-                    local bg = Instance.new("BillboardGui")
-                    bg.Name = "FruitESP"
-                    bg.Size = UDim2.new(0, 120, 0, 30)
-                    bg.StudsOffset = Vector3.new(0, 2, 0)
-                    bg.AlwaysOnTop = true
-                    bg.Parent = rootPart
-                    
-                    local tl = Instance.new("TextLabel")
-                    tl.Size = UDim2.new(1, 0, 1, 0)
-                    tl.BackgroundTransparency = 1
-                    tl.TextColor3 = fruitColor
-                    tl.TextStrokeTransparency = 0
-                    tl.TextSize = 12
-                    tl.Font = Enum.Font.GothamBold
-                    tl.Text = "🍎 " .. obj.Name
-                    tl.Parent = bg
-                    
-                    fruitCache[obj] = bg
-                end
-            end
-        end
-        for obj, gui in pairs(fruitCache) do
-            if not obj or not obj.Parent then
-                if gui then gui:Destroy() end
-                fruitCache[obj] = nil
-            else
-                gui.Enabled = fruitespenabled
-            end
-        end
-
-        -- Chest ESP
-        for _, obj in ipairs(Workspace:GetDescendants()) do
-            if (string.find(string.lower(obj.Name), "chest") or string.find(string.lower(obj.Name), "box")) and obj:IsA("BasePart") then
-                if not chestCache[obj] then
-                    local bg = Instance.new("BillboardGui")
-                    bg.Name = "ChestESP"
-                    bg.Size = UDim2.new(0, 100, 0, 30)
-                    bg.StudsOffset = Vector3.new(0, 1.5, 0)
-                    bg.AlwaysOnTop = true
-                    bg.Parent = obj
-                    
-                    local tl = Instance.new("TextLabel")
-                    tl.Size = UDim2.new(1, 0, 1, 0)
-                    tl.BackgroundTransparency = 1
-                    tl.TextColor3 = chestColor
-                    tl.TextStrokeTransparency = 0
-                    tl.TextSize = 12
-                    tl.Font = Enum.Font.GothamBold
-                    tl.Text = "📦 Chest"
-                    tl.Parent = bg
-                    
-                    chestCache[obj] = bg
-                end
-            end
-        end
-        for obj, gui in pairs(chestCache) do
-            if not obj or not obj.Parent then
-                if gui then gui:Destroy() end
-                chestCache[obj] = nil
-            else
-                gui.Enabled = chestespenabled
-            end
-        end
-    end)
-end
-
 RunService.RenderStepped:Connect(function()
-    if fovadjustenabled then
-        Camera.FieldOfView = customCameraFOV
-    end
-
     fovCircle.Visible = fovcircleenabled
     if fovcircleenabled then
         fovCircle.Size = UDim2.new(0, fovradius * 2, 0, fovradius * 2)
@@ -1376,6 +1212,4 @@ RunService.RenderStepped:Connect(function()
             updatePlayerESP(p)
         end
     end
-
-    scanBloxFruitsItems()
 end)
