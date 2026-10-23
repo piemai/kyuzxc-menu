@@ -39,8 +39,8 @@ local function notify(msg)
     end)
 end
 
---// Logo Settings (Palitan ang "" ng "rbxassetid://YOUR_IMAGE_ID" kapag na-upload mo na sa Roblox)
-local LOGO_IMAGE_ID = "137377470541475" 
+--// Logo Settings (Lion-Letter K Asset ID)
+local LOGO_IMAGE_ID = "rbxassetid://137377470541475" 
 
 --// Feature States
 local showteam = true
@@ -371,7 +371,7 @@ function Library:Load()
     screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
     screenGui.Parent = uiParent
 
-    --// Floating Draggable Logo Button (Pang-Open/Close ng Menu sa iPad)
+    --// Floating Draggable Delta-Style Logo Button (Pang-Open/Close ng Menu)
     local logoGui = Instance.new("ScreenGui")
     logoGui.Name = "KyuzxcLogoGui"
     logoGui.ResetOnSpawn = false
@@ -380,16 +380,16 @@ function Library:Load()
 
     local floatingLogo = Instance.new("TextButton")
     floatingLogo.Name = "FloatingLogoBtn"
-    floatingLogo.Size = UDim2.new(0, 48, 0, 48)
-    floatingLogo.Position = UDim2.new(0, 18, 0.5, -24)
-    floatingLogo.BackgroundColor3 = Color3.fromRGB(38, 29, 57)
+    floatingLogo.Size = UDim2.new(0, 52, 0, 52)
+    floatingLogo.Position = UDim2.new(0, 20, 0.5, -26)
+    floatingLogo.BackgroundColor3 = Color3.fromRGB(27, 21, 42)
     floatingLogo.Text = ""
     floatingLogo.AutoButtonColor = true
     floatingLogo.Active = true
     floatingLogo.Parent = logoGui
 
     local floatCorner = Instance.new("UICorner")
-    floatCorner.CornerRadius = UDim.new(0, 12)
+    floatCorner.CornerRadius = UDim.new(0, 14)
     floatCorner.Parent = floatingLogo
 
     local floatStroke = Instance.new("UIStroke")
@@ -397,7 +397,7 @@ function Library:Load()
     floatStroke.Thickness = 2
     floatStroke.Parent = floatingLogo
 
-    applyLogoVisuals(floatingLogo, 20)
+    applyLogoVisuals(floatingLogo, 22)
 
     -- Draggable logic para sa Floating Logo
     local logoDragging, logoDragStart, logoStartPos
@@ -436,7 +436,7 @@ function Library:Load()
         mainFrame.Draggable = true
         mainFrame.Parent = screenGui
 
-        -- Tap Floating Logo para i-toggle ang Main Menu
+        -- Tap Floating Logo para i-toggle ang Main Menu (Delta Style)
         local logoClickTime = 0
         floatingLogo.MouseButton1Down:Connect(function()
             logoClickTime = tick()
@@ -489,15 +489,16 @@ function Library:Load()
 
         applyLogoVisuals(headerLogo, 14)
 
+        --// KYUZXC SIMPLE MOD MENU NASA LOOB NG HEADER
         local titleBar = Instance.new("TextLabel")
         titleBar.Size = UDim2.new(1, -110, 1, 0)
         titleBar.BackgroundTransparency = 1
         titleBar.TextColor3 = Color3.fromRGB(205, 170, 255)
         titleBar.Font = Enum.Font.GothamBold
-        titleBar.TextSize = 13
+        titleBar.TextSize = 12
         titleBar.TextXAlignment = Enum.TextXAlignment.Left
         titleBar.Position = UDim2.new(0, 44, 0, 0)
-        titleBar.Text = string.upper(win.Title)
+        titleBar.Text = "KYUZXC SIMPLE MOD MENU"
         titleBar.Parent = header
         
         local closeBtn = Instance.new("TextButton")
