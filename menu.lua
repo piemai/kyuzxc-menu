@@ -1,4 +1,4 @@
---// Kyuzxc Simple Mod Menu (iPad Edition + Fixed ESP Cache Cleanup & Minimize)
+--// Kyuzxc Simple Mod Menu (iPad Edition + Violet Sidebar Theme & Fully Working Functions)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -55,10 +55,10 @@ local targetPartOption = "Head"
 local aimbotSmoothing = 0.3
 local selectedTargetPlayer = nil
 
---// ESP Colors & Theme
+--// ESP Colors & Violet Theme
 local teamColor = Color3.fromRGB(0, 255, 120)  -- Green (Team)
 local enemyColor = Color3.fromRGB(255, 75, 75) -- Red (Enemy)
-local accentColor = Color3.fromRGB(0, 255, 128)
+local accentColor = Color3.fromRGB(165, 95, 255) -- Violet Accent
 
 --// Floating Draggable Mobile Aimbot Toggle Button
 local mobileGui = Instance.new("ScreenGui")
@@ -71,7 +71,7 @@ local aimToggleButton = Instance.new("TextButton")
 aimToggleButton.Size = UDim2.new(0, 75, 0, 75)
 aimToggleButton.AnchorPoint = Vector2.new(0.5, 0.5)
 aimToggleButton.Position = UDim2.new(0.5, 0, 0.85, 0)
-aimToggleButton.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+aimToggleButton.BackgroundColor3 = Color3.fromRGB(38, 29, 57)
 aimToggleButton.TextColor3 = Color3.fromRGB(255, 75, 75)
 aimToggleButton.Text = "AIM: OFF"
 aimToggleButton.Font = Enum.Font.GothamBold
@@ -127,13 +127,13 @@ aimToggleButton.MouseButton1Up:Connect(function()
     if tick() - clickTimer < 0.2 then
         aimbotactive = not aimbotactive
         if aimbotactive then
-            aimToggleButton.BackgroundColor3 = Color3.fromRGB(0, 180, 90)
+            aimToggleButton.BackgroundColor3 = Color3.fromRGB(93, 205, 151)
             aimToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-            aimBtnStroke.Color = Color3.fromRGB(0, 255, 128)
+            aimBtnStroke.Color = accentColor
             aimToggleButton.Text = "AIM: ON"
             notify("Mobile Aimbot Enabled")
         else
-            aimToggleButton.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+            aimToggleButton.BackgroundColor3 = Color3.fromRGB(38, 29, 57)
             aimToggleButton.TextColor3 = Color3.fromRGB(255, 75, 75)
             aimBtnStroke.Color = Color3.fromRGB(255, 75, 75)
             aimToggleButton.Text = "AIM: OFF"
@@ -157,7 +157,7 @@ local function teleportToTarget()
     end
 end
 
---// Library Framework
+--// Library Framework (Sidebar Layout Edition)
 local Library = {
     Windows = {}
 }
@@ -206,16 +206,16 @@ function Library:Load()
     
     for _, win in ipairs(self.Windows) do
         local mainFrame = Instance.new("Frame")
-        mainFrame.Size = UDim2.new(0, 290, 0, 440)
-        mainFrame.Position = UDim2.new(0.5, -145, 0.3, -220)
-        mainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
+        mainFrame.Size = UDim2.new(0, 420, 0, 340) -- Mas pinalawak pahiga para sa sidebar
+        mainFrame.Position = UDim2.new(0.5, -210, 0.3, -170)
+        mainFrame.BackgroundColor3 = Color3.fromRGB(17, 14, 27)
         mainFrame.BorderSizePixel = 0
         mainFrame.Active = true
         mainFrame.Draggable = true
         mainFrame.Parent = screenGui
         
         local mainCorner = Instance.new("UICorner")
-        mainCorner.CornerRadius = UDim.new(0, 8)
+        mainCorner.CornerRadius = UDim.new(0, 12)
         mainCorner.Parent = mainFrame
         
         local stroke = Instance.new("UIStroke")
@@ -224,26 +224,37 @@ function Library:Load()
         stroke.Transparency = 0.3
         stroke.Parent = mainFrame
 
+        --// Header
+        local header = Instance.new("Frame")
+        header.Size = UDim2.new(1, 0, 0, 42)
+        header.BackgroundColor3 = Color3.fromRGB(27, 21, 42)
+        header.BorderSizePixel = 0
+        header.Parent = mainFrame
+
+        local headerCorner = Instance.new("UICorner")
+        headerCorner.CornerRadius = UDim.new(0, 12)
+        headerCorner.Parent = header
+
         local titleBar = Instance.new("TextLabel")
-        titleBar.Size = UDim2.new(1, -70, 0, 40)
+        titleBar.Size = UDim2.new(1, -70, 1, 0)
         titleBar.BackgroundTransparency = 1
-        titleBar.TextColor3 = accentColor
+        titleBar.TextColor3 = Color3.fromRGB(205, 170, 255)
         titleBar.Font = Enum.Font.GothamBold
         titleBar.TextSize = 13
         titleBar.TextXAlignment = Enum.TextXAlignment.Left
         titleBar.Position = UDim2.new(0, 14, 0, 0)
         titleBar.Text = "  " .. string.upper(win.Title)
-        titleBar.Parent = mainFrame
+        titleBar.Parent = header
         
         local closeBtn = Instance.new("TextButton")
         closeBtn.Size = UDim2.new(0, 26, 0, 26)
-        closeBtn.Position = UDim2.new(1, -32, 0, 7)
-        closeBtn.BackgroundColor3 = Color3.fromRGB(230, 60, 60)
+        closeBtn.Position = UDim2.new(1, -32, 0, 8)
+        closeBtn.BackgroundColor3 = Color3.fromRGB(210, 75, 100)
         closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
         closeBtn.Text = "×"
         closeBtn.Font = Enum.Font.GothamBold
         closeBtn.TextSize = 14
-        closeBtn.Parent = mainFrame
+        closeBtn.Parent = header
         
         local closeCorner = Instance.new("UICorner")
         closeCorner.CornerRadius = UDim.new(0, 6)
@@ -262,42 +273,54 @@ function Library:Load()
         
         local minBtn = Instance.new("TextButton")
         minBtn.Size = UDim2.new(0, 26, 0, 26)
-        minBtn.Position = UDim2.new(1, -64, 0, 7)
-        minBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
+        minBtn.Position = UDim2.new(1, -64, 0, 8)
+        minBtn.BackgroundColor3 = Color3.fromRGB(38, 29, 57)
         minBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
         minBtn.Text = "-"
         minBtn.Font = Enum.Font.GothamBold
         minBtn.TextSize = 14
-        minBtn.Parent = mainFrame
+        minBtn.Parent = header
         
         local minCorner = Instance.new("UICorner")
         minCorner.CornerRadius = UDim.new(0, 6)
         minCorner.Parent = minBtn
-        
-        local catBar = Instance.new("Frame")
-        catBar.Size = UDim2.new(1, -28, 0, 32)
-        catBar.Position = UDim2.new(0, 14, 0, 44)
-        catBar.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-        catBar.Parent = mainFrame
-        
-        local catBarCorner = Instance.new("UICorner")
-        catBarCorner.CornerRadius = UDim.new(0, 6)
-        catBarCorner.Parent = catBar
 
-        local catLayout = Instance.new("UIListLayout")
-        catLayout.FillDirection = Enum.FillDirection.Horizontal
-        catLayout.SortOrder = Enum.SortOrder.LayoutOrder
-        catLayout.Padding = UDim.new(0, 4)
-        catLayout.Parent = catBar
+        --// Sidebar Navigation (Kaliwa)
+        local sidebar = Instance.new("ScrollingFrame")
+        sidebar.Size = UDim2.new(0, 115, 1, -54)
+        sidebar.Position = UDim2.new(0, 8, 0, 48)
+        sidebar.BackgroundColor3 = Color3.fromRGB(27, 21, 42)
+        sidebar.BorderSizePixel = 0
+        sidebar.CanvasSize = UDim2.new(0, 0, 0, 0)
+        sidebar.AutomaticCanvasSize = Enum.AutomaticSize.Y
+        sidebar.ScrollBarThickness = 2
+        sidebar.ScrollBarImageColor3 = accentColor
+        sidebar.Parent = mainFrame
+
+        local sideCorner = Instance.new("UICorner")
+        sideCorner.CornerRadius = UDim.new(0, 8)
+        sideCorner.Parent = sidebar
+
+        local sideLayout = Instance.new("UIListLayout")
+        sideLayout.SortOrder = Enum.SortOrder.LayoutOrder
+        sideLayout.Padding = UDim.new(0, 6)
+        sideLayout.Parent = sidebar
+
+        local sidePadding = Instance.new("UIPadding")
+        sidePadding.PaddingTop = UDim.new(0, 6)
+        sidePadding.PaddingLeft = UDim.new(0, 6)
+        sidePadding.PaddingRight = UDim.new(0, 6)
+        sidePadding.Parent = sidebar
         
+        --// Content Container (Kanan)
         local contentContainer = Instance.new("ScrollingFrame")
-        contentContainer.Size = UDim2.new(1, -28, 1, -92)
-        contentContainer.Position = UDim2.new(0, 14, 0, 84)
+        contentContainer.Size = UDim2.new(1, -135, 1, -54)
+        contentContainer.Position = UDim2.new(0, 129, 0, 48)
         contentContainer.BackgroundTransparency = 1
         contentContainer.BorderSizePixel = 0
         contentContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
         contentContainer.AutomaticCanvasSize = Enum.AutomaticSize.Y
-        contentContainer.ScrollBarThickness = 2
+        contentContainer.ScrollBarThickness = 3
         contentContainer.ScrollBarImageColor3 = accentColor
         contentContainer.Parent = mainFrame
         
@@ -308,20 +331,19 @@ function Library:Load()
         
         local categoryFrames = {}
         local categoryButtons = {}
-        local numCategories = #win.Categories
         
         for _, cat in ipairs(win.Categories) do
             local cBtn = Instance.new("TextButton")
-            cBtn.Size = UDim2.new(1 / numCategories, -3, 1, 0)
-            cBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 42)
-            cBtn.TextColor3 = Color3.fromRGB(160, 160, 175)
+            cBtn.Size = UDim2.new(1, 0, 0, 32)
+            cBtn.BackgroundColor3 = Color3.fromRGB(49, 41, 63)
+            cBtn.TextColor3 = Color3.fromRGB(170, 158, 190)
             cBtn.Text = cat.Name
             cBtn.Font = Enum.Font.GothamBold
-            cBtn.TextSize = 10
-            cBtn.Parent = catBar
+            cBtn.TextSize = 11
+            cBtn.Parent = sidebar
             
             local cCorner = Instance.new("UICorner")
-            cCorner.CornerRadius = UDim.new(0, 5)
+            cCorner.CornerRadius = UDim.new(0, 6)
             cCorner.Parent = cBtn
             
             local itemHolder = Instance.new("Frame")
@@ -346,7 +368,7 @@ function Library:Load()
                     togButton.TextColor3 = Color3.fromRGB(255, 255, 255)
                     togButton.Text = tab.Name
                 elseif tab.IsSpeedInput or tab.IsFovInput or tab.IsMaxDistInput then
-                    togButton.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
+                    togButton.BackgroundColor3 = Color3.fromRGB(38, 29, 57)
                     togButton.TextColor3 = Color3.fromRGB(200, 200, 200)
                     if tab.IsSpeedInput then
                         togButton.Text = "  Speed Value:"
@@ -360,7 +382,7 @@ function Library:Load()
                     local textBox = Instance.new("TextBox")
                     textBox.Size = UDim2.new(0, 75, 0, 24)
                     textBox.Position = UDim2.new(1, -80, 0.5, -12)
-                    textBox.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
+                    textBox.BackgroundColor3 = Color3.fromRGB(17, 14, 27)
                     textBox.TextColor3 = accentColor
                     if tab.IsSpeedInput then
                         textBox.Text = tostring(customWalkSpeed)
@@ -402,14 +424,14 @@ function Library:Load()
                         end
                     end)
                 elseif tab.IsPartDropdown then
-                    togButton.BackgroundColor3 = Color3.fromRGB(0, 150, 150)
+                    togButton.BackgroundColor3 = Color3.fromRGB(90, 40, 150)
                     togButton.TextColor3 = Color3.fromRGB(255, 255, 255)
                     togButton.Text = "Aim Part: " .. targetPartOption .. " ▼"
                     
                     local partFrame = Instance.new("Frame")
                     partFrame.LayoutOrder = (idx * 2) + 1
                     partFrame.Size = UDim2.new(1, 0, 0, 96)
-                    partFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
+                    partFrame.BackgroundColor3 = Color3.fromRGB(27, 21, 42)
                     partFrame.BorderSizePixel = 0
                     partFrame.Visible = false
                     partFrame.Parent = itemHolder
@@ -427,7 +449,7 @@ function Library:Load()
                     for _, ptName in ipairs(parts) do
                         local pBtn = Instance.new("TextButton")
                         pBtn.Size = UDim2.new(1, 0, 0, 28)
-                        pBtn.BackgroundColor3 = (targetPartOption == ptName) and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(32, 32, 45)
+                        pBtn.BackgroundColor3 = (targetPartOption == ptName) and Color3.fromRGB(93, 205, 151) or Color3.fromRGB(38, 29, 57)
                         pBtn.TextColor3 = Color3.fromRGB(235, 235, 235)
                         pBtn.Text = "Target: " .. ptName
                         pBtn.Font = Enum.Font.GothamBold
@@ -450,14 +472,14 @@ function Library:Load()
                         partFrame.Visible = not partFrame.Visible
                     end)
                 elseif tab.IsSmoothDropdown then
-                    togButton.BackgroundColor3 = Color3.fromRGB(200, 120, 0)
+                    togButton.BackgroundColor3 = Color3.fromRGB(110, 50, 180)
                     togButton.TextColor3 = Color3.fromRGB(255, 255, 255)
                     togButton.Text = "Aim Mode: Medium ▼"
                     
                     local smoothFrame = Instance.new("Frame")
                     smoothFrame.LayoutOrder = (idx * 2) + 1
                     smoothFrame.Size = UDim2.new(1, 0, 0, 128)
-                    smoothFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
+                    smoothFrame.BackgroundColor3 = Color3.fromRGB(27, 21, 42)
                     smoothFrame.BorderSizePixel = 0
                     smoothFrame.Visible = false
                     smoothFrame.Parent = itemHolder
@@ -479,7 +501,7 @@ function Library:Load()
                     for _, mode in ipairs(modes) do
                         local mBtn = Instance.new("TextButton")
                         mBtn.Size = UDim2.new(1, 0, 0, 28)
-                        mBtn.BackgroundColor3 = (aimbotSmoothing == mode.Val) and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(32, 32, 45)
+                        mBtn.BackgroundColor3 = (aimbotSmoothing == mode.Val) and Color3.fromRGB(93, 205, 151) or Color3.fromRGB(38, 29, 57)
                         mBtn.TextColor3 = Color3.fromRGB(235, 235, 235)
                         mBtn.Text = mode.Name
                         mBtn.Font = Enum.Font.GothamBold
@@ -502,20 +524,20 @@ function Library:Load()
                         smoothFrame.Visible = not smoothFrame.Visible
                     end)
                 elseif tab.IsScrollingDropdown then
-                    togButton.BackgroundColor3 = Color3.fromRGB(110, 40, 200)
+                    togButton.BackgroundColor3 = Color3.fromRGB(80, 40, 160)
                     togButton.TextColor3 = Color3.fromRGB(255, 255, 255)
                     togButton.Text = "Target: [Select Player] ▼"
                     
                     local dropFrame = Instance.new("ScrollingFrame")
                     dropFrame.LayoutOrder = (idx * 2) + 1
                     dropFrame.Size = UDim2.new(1, 0, 0, 180)
-                    dropFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
+                    dropFrame.BackgroundColor3 = Color3.fromRGB(27, 21, 42)
                     dropFrame.BorderSizePixel = 0
                     dropFrame.Visible = true
                     dropFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
                     dropFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
                     dropFrame.ScrollBarThickness = 3
-                    dropFrame.ScrollBarImageColor3 = Color3.fromRGB(110, 40, 200)
+                    dropFrame.ScrollBarImageColor3 = accentColor
                     dropFrame.Parent = itemHolder
                     
                     local dropCorner = Instance.new("UICorner")
@@ -556,7 +578,7 @@ function Library:Load()
                             if p ~= player then
                                 local pBtn = Instance.new("TextButton")
                                 pBtn.Size = UDim2.new(1, 0, 0, 28)
-                                pBtn.BackgroundColor3 = (selectedTargetPlayer == p) and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(32, 32, 45)
+                                pBtn.BackgroundColor3 = (selectedTargetPlayer == p) and Color3.fromRGB(93, 205, 151) or Color3.fromRGB(38, 29, 57)
                                 pBtn.TextColor3 = Color3.fromRGB(235, 235, 235)
                                 pBtn.Text = p.DisplayName .. " (@" .. p.Name .. ")"
                                 pBtn.Font = Enum.Font.GothamBold
@@ -594,7 +616,7 @@ function Library:Load()
                         end
                     end)
                 else
-                    togButton.BackgroundColor3 = tab.State and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(28, 28, 38)
+                    togButton.BackgroundColor3 = tab.State and Color3.fromRGB(93, 205, 151) or Color3.fromRGB(38, 29, 57)
                     togButton.TextColor3 = tab.State and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(180, 180, 190)
                     togButton.Text = "  " .. tab.Name .. " : " .. (tab.State and "ON" or "OFF")
                     togButton.TextXAlignment = Enum.TextXAlignment.Left
@@ -621,7 +643,7 @@ function Library:Load()
                     togButton.MouseButton1Click:Connect(function()
                         currentState = not currentState
                         togButton.Text = "  " .. tab.Name .. " : " .. (currentState and "ON" or "OFF")
-                        togButton.BackgroundColor3 = currentState and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(28, 28, 38)
+                        togButton.BackgroundColor3 = currentState and Color3.fromRGB(93, 205, 151) or Color3.fromRGB(38, 29, 57)
                         togButton.TextColor3 = currentState and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(180, 180, 190)
                         if tab.Callback then tab.Callback(currentState) end
                     end)
@@ -638,28 +660,28 @@ function Library:Load()
             cBtn.MouseButton1Click:Connect(function()
                 for _, holder in ipairs(categoryFrames) do holder.Visible = false end
                 for _, btn in ipairs(categoryButtons) do 
-                    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 42)
-                    btn.TextColor3 = Color3.fromRGB(160, 160, 175)
+                    btn.BackgroundColor3 = Color3.fromRGB(49, 41, 63)
+                    btn.TextColor3 = Color3.fromRGB(170, 158, 190)
                 end
                 itemHolder.Visible = true
                 cBtn.BackgroundColor3 = accentColor
-                cBtn.TextColor3 = Color3.fromRGB(18, 18, 24)
+                cBtn.TextColor3 = Color3.fromRGB(245, 240, 255)
             end)
         end
         
         if categoryFrames[1] then
             categoryFrames[1].Visible = true
             categoryButtons[1].BackgroundColor3 = accentColor
-            categoryButtons[1].TextColor3 = Color3.fromRGB(18, 18, 24)
+            categoryButtons[1].TextColor3 = Color3.fromRGB(245, 240, 255)
         end
         
         --// Fixed Minimize / Maximize Logic
         local minimized = false
         minBtn.MouseButton1Click:Connect(function()
             minimized = not minimized
-            catBar.Visible = not minimized
+            sidebar.Visible = not minimized
             contentContainer.Visible = not minimized
-            mainFrame.Size = minimized and UDim2.new(0, 290, 0, 44) or UDim2.new(0, 290, 0, 440)
+            mainFrame.Size = minimized and UDim2.new(0, 420, 0, 42) or UDim2.new(0, 420, 0, 340)
             minBtn.Text = minimized and "+" or "-"
         end)
     end
@@ -713,7 +735,7 @@ catCombat:CreateTab("aimbot button", {enabled = false}, function(tog)
     aimToggleButton.Visible = tog
     if not tog then
         aimbotactive = false
-        aimToggleButton.BackgroundColor3 = Color3.fromRGB(30, 30, 45)
+        aimToggleButton.BackgroundColor3 = Color3.fromRGB(38, 29, 57)
         aimToggleButton.TextColor3 = Color3.fromRGB(255, 75, 75)
         aimBtnStroke.Color = Color3.fromRGB(255, 75, 75)
         aimToggleButton.Text = "AIM: OFF"
@@ -935,6 +957,11 @@ local function updatePlayerESP(p)
             end
             return
         end
+    else
+        if espCache[p] then
+            hideESP(espCache[p])
+        end
+        return
     end
     
     if not espCache[p] then
