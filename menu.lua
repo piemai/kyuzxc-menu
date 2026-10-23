@@ -9,7 +9,7 @@ local Camera = workspace.CurrentCamera
 local player = Players.LocalPlayer
 local uiParent = (gethui and gethui()) or CoreGui
 
--- Linisin ang lumang UI kung naka-load na
+-- Linisin ang lumang UI kung naka-load na[cite: 1]
 if uiParent:FindFirstChild("KyuzxcModMenu") then
     uiParent.KyuzxcModMenu:Destroy()
 end
@@ -33,32 +33,32 @@ local function notify(msg)
 end
 
 --// Feature States
-local showteam = true
-local showenemy = true
-local espenabled = true
-local boxenabled = true
-local skeletonenabled = true
-local tracerenabled = true
-local showdist = true
-local maxEspDistance = 300
-local noclipped = false
-local infjumpenabled = false
-local speedenabled = false
-local customWalkSpeed = 50
-local flyenabled = false
-local godmodeenabled = false
-local fovcircleenabled = false
-local fovradius = 120
-local aimbotenabled = false
-local aimbotactive = false
-local targetPartOption = "Head"
-local aimbotSmoothing = 0.3
-local selectedTargetPlayer = nil
+local showteam = true[cite: 1]
+local showenemy = true[cite: 1]
+local espenabled = true[cite: 1]
+local boxenabled = true[cite: 1]
+local skeletonenabled = true[cite: 1]
+local tracerenabled = true[cite: 1]
+local showdist = true[cite: 1]
+local maxEspDistance = 300[cite: 1]
+local noclipped = false[cite: 1]
+local infjumpenabled = false[cite: 1]
+local speedenabled = false[cite: 1]
+local customWalkSpeed = 50[cite: 1]
+local flyenabled = false[cite: 1]
+local godmodeenabled = false[cite: 1]
+local fovcircleenabled = false[cite: 1]
+local fovradius = 120[cite: 1]
+local aimbotenabled = false[cite: 1]
+local aimbotactive = false[cite: 1]
+local targetPartOption = "Head"[cite: 1]
+local aimbotSmoothing = 0.3[cite: 1]
+local selectedTargetPlayer = nil[cite: 1]
 
 --// ESP Colors & Violet Theme
-local teamColor = Color3.fromRGB(0, 255, 120)  -- Green (Team)
-local enemyColor = Color3.fromRGB(255, 75, 75) -- Red (Enemy)
-local accentColor = Color3.fromRGB(165, 95, 255) -- Violet Accent
+local teamColor = Color3.fromRGB(0, 255, 120)  -- Green (Team)[cite: 1]
+local enemyColor = Color3.fromRGB(255, 75, 75) -- Red (Enemy)[cite: 1]
+local accentColor = Color3.fromRGB(165, 95, 255) -- Violet Accent[cite: 1]
 
 --// Floating Draggable Mobile Aimbot Toggle Button
 local mobileGui = Instance.new("ScreenGui")
@@ -142,19 +142,21 @@ aimToggleButton.MouseButton1Up:Connect(function()
     end
 end)
 
---// Teleport Logic
+--// Teleport Logic (Protected with pcall)
 local function teleportToTarget()
-    local myChar = player.Character
-    if selectedTargetPlayer and selectedTargetPlayer.Character and selectedTargetPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        if myChar and myChar:FindFirstChild("HumanoidRootPart") then
-            myChar.HumanoidRootPart.CFrame = selectedTargetPlayer.Character.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0)
-            notify("Teleported to " .. selectedTargetPlayer.Name)
+    pcall(function()
+        local myChar = player.Character
+        if selectedTargetPlayer and selectedTargetPlayer.Character and selectedTargetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            if myChar and myChar:FindFirstChild("HumanoidRootPart") then
+                myChar.HumanoidRootPart.CFrame = selectedTargetPlayer.Character.HumanoidRootPart.CFrame + Vector3.new(0, 3, 0)
+                notify("Teleported to " .. selectedTargetPlayer.Name)
+            else
+                notify("Your character is not spawned.")
+            end
         else
-            notify("Your character is not spawned.")
+            notify("No target selected or player left.")
         end
-    else
-        notify("No target selected or player left.")
-    end
+    end)
 end
 
 --// Library Framework (Resizable & Responsive Sidebar Edition)
@@ -285,7 +287,7 @@ function Library:Load()
         minCorner.CornerRadius = UDim.new(0, 6)
         minCorner.Parent = minBtn
 
-        --// Sidebar Navigation (Kaliwa - Responsive Size)
+        --// Sidebar Navigation
         local sidebar = Instance.new("ScrollingFrame")
         sidebar.Size = UDim2.new(0, 120, 1, -54)
         sidebar.Position = UDim2.new(0, 8, 0, 48)
@@ -312,7 +314,7 @@ function Library:Load()
         sidePadding.PaddingRight = UDim.new(0, 6)
         sidePadding.Parent = sidebar
         
-        --// Content Container (Kanan - Responsive)
+        --// Content Container
         local contentContainer = Instance.new("ScrollingFrame")
         contentContainer.Size = UDim2.new(1, -140, 1, -54)
         contentContainer.Position = UDim2.new(0, 134, 0, 48)
@@ -329,7 +331,7 @@ function Library:Load()
         contentLayout.Padding = UDim.new(0, 6)
         contentLayout.Parent = contentContainer
 
-        --// Resize Grip (Pang-resize ng Menu sa Ipad/PC)
+        --// Resize Grip
         local resizeGrip = Instance.new("TextButton")
         resizeGrip.Name = "ResizeGrip"
         resizeGrip.Size = UDim2.fromOffset(20, 20)
@@ -747,9 +749,11 @@ local catMovement = Window:CreateCategory("Movement")
 catMovement:CreateTab("noclip", {enabled = false}, function(tog) 
     noclipped = tog 
     if not tog and player.Character then
-        for _, part in ipairs(player.Character:GetDescendants()) do
-            if part:IsA("BasePart") then part.CanCollide = true end
-        end
+        pcall(function()
+            for _, part in ipairs(player.Character:GetDescendants()) do
+                if part:IsA("BasePart") then part.CanCollide = true end
+            end
+        end)
     end
 end)
 catMovement:CreateTab("inf jump", {enabled = false}, function(tog) 
@@ -758,8 +762,10 @@ end)
 catMovement:CreateTab("speed hack", {enabled = false}, function(tog) 
     speedenabled = tog 
     if not tog and player.Character then
-        local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
-        if humanoid then humanoid.WalkSpeed = 16 end
+        pcall(function()
+            local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+            if humanoid then humanoid.WalkSpeed = 16 end
+        end)
     end
 end)
 catMovement:CreateTab("speed value", {isSpeedInput = true})
@@ -816,13 +822,15 @@ end)
 
 UserInputService.JumpRequest:Connect(function()
     if infjumpenabled then
-        local char = player.Character
-        if char then
-            local humanoid = char:FindFirstChildOfClass("Humanoid")
-            if humanoid then
-                humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+        pcall(function()
+            local char = player.Character
+            if char then
+                local humanoid = char:FindFirstChildOfClass("Humanoid")
+                if humanoid then
+                    humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                end
             end
-        end
+        end)
     end
 end)
 
@@ -833,18 +841,26 @@ RunService.Stepped:Connect(function()
         local hrp = char:FindFirstChild("HumanoidRootPart")
         
         if noclipped then
-            for _, part in ipairs(char:GetDescendants()) do
-                if part:IsA("BasePart") then part.CanCollide = false end
-            end
+            pcall(function()
+                for _, part in ipairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") then part.CanCollide = false end
+                end
+            end)
         end
         
         if humanoid then
             if speedenabled then
-                humanoid.WalkSpeed = customWalkSpeed
+                pcall(function()
+                    humanoid.WalkSpeed = customWalkSpeed
+                end)
             end
             
             if godmodeenabled then
-                humanoid.Health = humanoid.MaxHealth
+                pcall(function()
+                    if humanoid.Health < humanoid.MaxHealth then
+                        humanoid.Health = humanoid.MaxHealth
+                    end
+                end)
             end
         end
         
@@ -853,29 +869,31 @@ RunService.Stepped:Connect(function()
             local bg = hrp:FindFirstChild("KyuzxcFlyBodyGyro")
             
             if flyenabled then
-                if not bv then
-                    bv = Instance.new("BodyVelocity")
-                    bv.Name = "KyuzxcFlyBodyVelocity"
-                    bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-                    bv.Velocity = Vector3.new(0, 0, 0)
-                    bv.Parent = hrp
-                end
-                if not bg then
-                    bg = Instance.new("BodyGyro")
-                    bg.Name = "KyuzxcFlyBodyGyro"
-                    bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+                pcall(function()
+                    if not bv then
+                        bv = Instance.new("BodyVelocity")
+                        bv.Name = "KyuzxcFlyBodyVelocity"
+                        bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+                        bv.Velocity = Vector3.new(0, 0, 0)
+                        bv.Parent = hrp
+                    end
+                    if not bg then
+                        bg = Instance.new("BodyGyro")
+                        bg.Name = "KyuzxcFlyBodyGyro"
+                        bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+                        bg.CFrame = Camera.CFrame
+                        bg.Parent = hrp
+                    end
+                    
                     bg.CFrame = Camera.CFrame
-                    bg.Parent = hrp
-                end
-                
-                bg.CFrame = Camera.CFrame
-                local moveDir = Vector3.new(0, 0, 0)
-                if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + Camera.CFrame.LookVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - Camera.CFrame.LookVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - Camera.CFrame.RightVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + Camera.CFrame.RightVector end
-                
-                bv.Velocity = moveDir * 50
+                    local moveDir = Vector3.new(0, 0, 0)
+                    if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + Camera.CFrame.LookVector end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - Camera.CFrame.LookVector end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - Camera.CFrame.RightVector end
+                    if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + Camera.CFrame.RightVector end
+                    
+                    bv.Velocity = moveDir * 50
+                end)
             else
                 if bv then bv:Destroy() end
                 if bg then bg:Destroy() end
