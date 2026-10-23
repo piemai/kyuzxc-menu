@@ -1,4 +1,4 @@
---// Kyuzxc Simple Mod Menu (iPad Edition + Resizable, Responsive Violet Sidebar & Fully Working Functions).
+--// Kyuzxc Simple Mod Menu (iPad Edition + Resizable, Responsive Violet Sidebar & Fully Working Functions) :>
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -7,18 +7,21 @@ local StarterGui = game:GetService("StarterGui")
 local Camera = workspace.CurrentCamera
 
 local player = Players.LocalPlayer
-local uiParent = (gethui and gethui()) or CoreGui
+local playerGui = player:WaitForChild("PlayerGui")
+local uiParent = (gethui and gethui()) or playerGui
 
--- Linisin ang lumang UI kung naka-load na[cite: 1]
-if uiParent:FindFirstChild("KyuzxcModMenu") then
-    uiParent.KyuzxcModMenu:Destroy()
-end
-if uiParent:FindFirstChild("KyuzxcVisualsGui") then
-    uiParent.KyuzxcVisualsGui:Destroy()
-end
-if uiParent:FindFirstChild("KyuzxcMobileAimBtn") then
-    uiParent.KyuzxcMobileAimBtn:Destroy()
-end
+-- Linisin ang lumang UI kung naka-load na[cite: 2]
+pcall(function()
+    if uiParent:FindFirstChild("KyuzxcModMenu") then uiParent.KyuzxcModMenu:Destroy() end
+    if uiParent:FindFirstChild("KyuzxcVisualsGui") then uiParent.KyuzxcVisualsGui:Destroy() end
+    if uiParent:FindFirstChild("KyuzxcMobileAimBtn") then uiParent.KyuzxcMobileAimBtn:Destroy() end
+    if playerGui:FindFirstChild("KyuzxcModMenu") then playerGui.KyuzxcModMenu:Destroy() end
+    if playerGui:FindFirstChild("KyuzxcVisualsGui") then playerGui.KyuzxcVisualsGui:Destroy() end
+    if playerGui:FindFirstChild("KyuzxcMobileAimBtn") then playerGui.KyuzxcMobileAimBtn:Destroy() end
+end)
+
+-- Gamitin ang PlayerGui kung sakaling i-block ng laro ang gethui
+uiParent = playerGui
 
 --// Notification Helper
 local function notify(msg)
@@ -33,32 +36,32 @@ local function notify(msg)
 end
 
 --// Feature States
-local showteam = true[cite: 1]
-local showenemy = true[cite: 1]
-local espenabled = true[cite: 1]
-local boxenabled = true[cite: 1]
-local skeletonenabled = true[cite: 1]
-local tracerenabled = true[cite: 1]
-local showdist = true[cite: 1]
-local maxEspDistance = 300[cite: 1]
-local noclipped = false[cite: 1]
-local infjumpenabled = false[cite: 1]
-local speedenabled = false[cite: 1]
-local customWalkSpeed = 50[cite: 1]
-local flyenabled = false[cite: 1]
-local godmodeenabled = false[cite: 1]
-local fovcircleenabled = false[cite: 1]
-local fovradius = 120[cite: 1]
-local aimbotenabled = false[cite: 1]
-local aimbotactive = false[cite: 1]
-local targetPartOption = "Head"[cite: 1]
-local aimbotSmoothing = 0.3[cite: 1]
-local selectedTargetPlayer = nil[cite: 1]
+local showteam = true[cite: 2]
+local showenemy = true[cite: 2]
+local espenabled = true[cite: 2]
+local boxenabled = true[cite: 2]
+local skeletonenabled = true[cite: 2]
+local tracerenabled = true[cite: 2]
+local showdist = true[cite: 2]
+local maxEspDistance = 300[cite: 2]
+local noclipped = false[cite: 2]
+local infjumpenabled = false[cite: 2]
+local speedenabled = false[cite: 2]
+local customWalkSpeed = 50[cite: 2]
+local flyenabled = false[cite: 2]
+local godmodeenabled = false[cite: 2]
+local fovcircleenabled = false[cite: 2]
+local fovradius = 120[cite: 2]
+local aimbotenabled = false[cite: 2]
+local aimbotactive = false[cite: 2]
+local targetPartOption = "Head"[cite: 2]
+local aimbotSmoothing = 0.3[cite: 2]
+local selectedTargetPlayer = nil[cite: 2]
 
 --// ESP Colors & Violet Theme
-local teamColor = Color3.fromRGB(0, 255, 120)  -- Green (Team)[cite: 1]
-local enemyColor = Color3.fromRGB(255, 75, 75) -- Red (Enemy)[cite: 1]
-local accentColor = Color3.fromRGB(165, 95, 255) -- Violet Accent[cite: 1]
+local teamColor = Color3.fromRGB(0, 255, 120)  -- Green (Team)[cite: 2]
+local enemyColor = Color3.fromRGB(255, 75, 75) -- Red (Enemy)[cite: 2]
+local accentColor = Color3.fromRGB(165, 95, 255) -- Violet Accent[cite: 2]
 
 --// Floating Draggable Mobile Aimbot Toggle Button
 local mobileGui = Instance.new("ScreenGui")
@@ -142,7 +145,7 @@ aimToggleButton.MouseButton1Up:Connect(function()
     end
 end)
 
---// Teleport Logic (Protected with pcall)
+--// Teleport Logic
 local function teleportToTarget()
     pcall(function()
         local myChar = player.Character
@@ -264,12 +267,10 @@ function Library:Load()
         
         closeBtn.MouseButton1Click:Connect(function()
             screenGui:Destroy()
-            if uiParent:FindFirstChild("KyuzxcVisualsGui") then
-                uiParent.KyuzxcVisualsGui:Destroy()
-            end
-            if uiParent:FindFirstChild("KyuzxcMobileAimBtn") then
-                uiParent.KyuzxcMobileAimBtn:Destroy()
-            end
+            pcall(function()
+                if uiParent:FindFirstChild("KyuzxcVisualsGui") then uiParent.KyuzxcVisualsGui:Destroy() end
+                if uiParent:FindFirstChild("KyuzxcMobileAimBtn") then uiParent.KyuzxcMobileAimBtn:Destroy() end
+            end)
             notify("Menu closed and unloaded.")
         end)
         
