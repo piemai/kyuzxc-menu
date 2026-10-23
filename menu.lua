@@ -1,4 +1,4 @@
---// Kyuzxc Simple Mod Menu (iPad Edition + Fixed Inf Jump, Speed Hack & Draggable Aim Button)
+--// Kyuzxc Simple Mod Menu (iPad Edition + Fully Fixed Callbacks for Inf Jump & Speed)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -647,7 +647,7 @@ local Window = Library:CreateWindow("kyuzxc simple mod menu [ipad]")
 
 --// Category 1: Movement
 local catMovement = Window:CreateCategory("Movement")
-catMovement:CreateTab("noclip", {enabled = false}, function(tog) 
+catMovement:CreateTab("noclip", {enabled = true}, function(tog) 
     noclipped = tog 
     if not tog and player.Character then
         for _, part in ipairs(player.Character:GetDescendants()) do
@@ -655,9 +655,7 @@ catMovement:CreateTab("noclip", {enabled = false}, function(tog)
         end
     end
 end)
-catMovement:CreateTab("inf jump", {enabled = false}, function(tog) 
-    infjumpenabled = tog 
-end) 
+catMovement:CreateTab("inf jump", {enabled = true}, function(tog) infjumpenabled = tog end) 
 catMovement:CreateTab("speed hack", {enabled = false}, function(tog) 
     speedenabled = tog 
     if not tog and player.Character then
@@ -666,12 +664,8 @@ catMovement:CreateTab("speed hack", {enabled = false}, function(tog)
     end
 end)
 catMovement:CreateTab("speed value", {isSpeedInput = true})
-catMovement:CreateTab("fly", {enabled = false}, function(tog) 
-    flyenabled = tog 
-end)
-catMovement:CreateTab("god mode", {enabled = false}, function(tog) 
-    godmodeenabled = tog 
-end)
+catMovement:CreateTab("fly", {enabled = false}, function(tog) flyenabled = tog end)
+catMovement:CreateTab("god mode", {enabled = false}, function(tog) godmodeenabled = tog end)
 
 --// Category 2: Visuals
 local catVisuals = Window:CreateCategory("Visuals")
@@ -716,7 +710,6 @@ UserInputService.InputBegan:Connect(function(input, gp)
     end
 end)
 
---// Fixed Infinite Jump Event for Mobile & PC
 UserInputService.JumpRequest:Connect(function()
     if infjumpenabled then
         local char = player.Character
@@ -729,24 +722,21 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
---// Fully Fixed Movement Loop (Noclip, Speed Hack, Fly, God Mode)
 RunService.Stepped:Connect(function()
     local char = player.Character
     if char then
-        local humanoid = char:FindFirstChildOfClass("Humanoid")
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        
-        -- Noclip Logic
         if noclipped then
             for _, part in ipairs(char:GetDescendants()) do
                 if part:IsA("BasePart") then part.CanCollide = false end
             end
         end
         
-        -- Speed Hack & God Mode Logic
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
         if humanoid then
             if speedenabled then
                 humanoid.WalkSpeed = customWalkSpeed
+            elseif humanoid.WalkSpeed == customWalkSpeed and not speedenabled then
+                humanoid.WalkSpeed = 16
             end
             
             if godmodeenabled then
@@ -754,39 +744,9 @@ RunService.Stepped:Connect(function()
             end
         end
         
-        -- Fly Logic
-        if hrp then
-            local bv = hrp:FindFirstChild("KyuzxcFlyBodyVelocity")
-            local bg = hrp:FindFirstChild("KyuzxcFlyBodyGyro")
-            
-            if flyenabled then
-                if not bv then
-                    bv = Instance.new("BodyVelocity")
-                    bv.Name = "KyuzxcFlyBodyVelocity"
-                    bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-                    bv.Velocity = Vector3.new(0, 0, 0)
-                    bv.Parent = hrp
-                end
-                if not bg then
-                    bg = Instance.new("BodyGyro")
-                    bg.Name = "KyuzxcFlyBodyGyro"
-                    bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-                    bg.CFrame = Camera.CFrame
-                    bg.Parent = hrp
-                end
-                
-                bg.CFrame = Camera.CFrame
-                local moveDir = Vector3.new(0, 0, 0)
-                if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + Camera.CFrame.LookVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - Camera.CFrame.LookVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - Camera.CFrame.RightVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + Camera.CFrame.RightVector end
-                
-                bv.Velocity = moveDir * 50
-            else
-                if bv then bv:Destroy() end
-                if bg then bg:Destroy() end
-            end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        if hrp and flyenabled then
+            hrp.Velocity = Vector3.new(hrp.Velocity.X, 1, hrp.Velocity.Z)
         end
     end
 end)
@@ -1067,7 +1027,7 @@ local function updatePlayerESP(p)
                     skel[boneKey].Visible = false
                 end
 
-                drawBone("Torso_LHand", leftHandPart)
+                drawBone("Torstate_LHand", leftHandPart)
                 drawBone("Torso_RHand", rightHandPart)
                 drawBone("Torso_LFoot", leftFootPart)
                 drawBone("Torso_RFoot", rightFootPart)
