@@ -196,450 +196,309 @@ function Library:CreateWindow(title)
 end
 
 function Library:Load()
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "KyuzxcModMenu"
-    screenGui.ResetOnSpawn = false
-    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
-    screenGui.Parent = uiParent
-    
+    local TweenService = game:GetService("TweenService")
+    local palette = {
+        bg = Color3.fromRGB(16, 12, 29), panel = Color3.fromRGB(25, 19, 43),
+        surface = Color3.fromRGB(36, 27, 57), hover = Color3.fromRGB(49, 36, 76),
+        accent = Color3.fromRGB(155, 99, 255), accent2 = Color3.fromRGB(107, 65, 203),
+        text = Color3.fromRGB(245, 240, 255), muted = Color3.fromRGB(174, 159, 201),
+        off = Color3.fromRGB(80, 70, 104)
+    }
+    accentColor = palette.accent
+    local function make(class, properties, parent)
+        local object = Instance.new(class)
+        for key, value in pairs(properties) do object[key] = value end
+        object.Parent = parent
+        return object
+    end
+    local function round(object, radius)
+        make("UICorner", {CornerRadius = UDim.new(0, radius)}, object)
+    end
+    local function tween(object, properties)
+        TweenService:Create(object, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), properties):Play()
+    end
+    local screenGui = make("ScreenGui", {
+        Name = "KyuzxcModMenu", ResetOnSpawn = false,
+        ZIndexBehavior = Enum.ZIndexBehavior.Global
+    }, uiParent)
     for _, win in ipairs(self.Windows) do
-        local mainFrame = Instance.new("Frame")
-        mainFrame.Size = UDim2.new(0, 290, 0, 440)
-        mainFrame.Position = UDim2.new(0.5, -145, 0.3, -220)
-        mainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
-        mainFrame.BorderSizePixel = 0
-        mainFrame.Active = true
-        mainFrame.Draggable = true
-        mainFrame.Parent = screenGui
-        
-        local mainCorner = Instance.new("UICorner")
-        mainCorner.CornerRadius = UDim.new(0, 8)
-        mainCorner.Parent = mainFrame
-        
-        local stroke = Instance.new("UIStroke")
-        stroke.Color = accentColor
-        stroke.Thickness = 1.5
-        stroke.Transparency = 0.3
-        stroke.Parent = mainFrame
-
-        local titleBar = Instance.new("TextLabel")
-        titleBar.Size = UDim2.new(1, -70, 0, 40)
-        titleBar.BackgroundTransparency = 1
-        titleBar.TextColor3 = accentColor
-        titleBar.Font = Enum.Font.GothamBold
-        titleBar.TextSize = 13
-        titleBar.TextXAlignment = Enum.TextXAlignment.Left
-        titleBar.Position = UDim2.new(0, 14, 0, 0)
-        titleBar.Text = "  " .. string.upper(win.Title)
-        titleBar.Parent = mainFrame
-        
-        local closeBtn = Instance.new("TextButton")
-        closeBtn.Size = UDim2.new(0, 26, 0, 26)
-        closeBtn.Position = UDim2.new(1, -32, 0, 7)
-        closeBtn.BackgroundColor3 = Color3.fromRGB(230, 60, 60)
-        closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        closeBtn.Text = "×"
-        closeBtn.Font = Enum.Font.GothamBold
-        closeBtn.TextSize = 14
-        closeBtn.Parent = mainFrame
-        
-        local closeCorner = Instance.new("UICorner")
-        closeCorner.CornerRadius = UDim.new(0, 6)
-        closeCorner.Parent = closeBtn
-        
-        closeBtn.MouseButton1Click:Connect(function()
-            screenGui:Destroy()
-            if uiParent:FindFirstChild("KyuzxcVisualsGui") then
-                uiParent.KyuzxcVisualsGui:Destroy()
+        local viewport = workspace.CurrentCamera.ViewportSize
+        local mobile = viewport.X < 650
+        local width = math.min(mobile and 355 or 475, math.max(260, viewport.X - 24))
+        local height = math.min(mobile and 480 or 550, math.max(250, viewport.Y - 36))
+        local expandedHeight = height
+        local main = make("Frame", {
+            Name = "MainWindow", AnchorPoint = Vector2.new(0.5, 0.5),
+            Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(width, height),
+            BackgroundColor3 = palette.bg, BorderSizePixel = 0, Active = true,
+            ClipsDescendants = true
+        }, screenGui)
+        round(main, 16)
+        make("UIStroke", {Color = palette.accent2, Thickness = 1.3, Transparency = 0.25}, main)
+        local header = make("Frame", {
+            Name = "Header", Size = UDim2.new(1, 0, 0, 68),
+            BackgroundColor3 = palette.panel, BorderSizePixel = 0, Active = true
+        }, main)
+        local stripe = make("Frame", {
+            Size = UDim2.new(1, 0, 0, 3), BackgroundColor3 = palette.accent,
+            BorderSizePixel = 0
+        }, header)
+        make("UIGradient", {Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, palette.accent),
+            ColorSequenceKeypoint.new(1, palette.accent2)
+        })}, stripe)
+        local title = make("TextLabel", {
+            Position = UDim2.fromOffset(17, 13), Size = UDim2.new(1, -105, 0, 24),
+            BackgroundTransparency = 1, Text = "KYUZXC  /  MENU", Font = Enum.Font.GothamBold,
+            TextSize = 17, TextColor3 = palette.text, TextXAlignment = Enum.TextXAlignment.Left
+        }, header)
+        make("TextLabel", {
+            Position = UDim2.fromOffset(18, 37), Size = UDim2.new(1, -110, 0, 18),
+            BackgroundTransparency = 1, Text = "VIOLET EDITION  •  " .. (mobile and "MOBILE" or "DESKTOP"),
+            Font = Enum.Font.GothamMedium, TextSize = 10, TextColor3 = palette.muted,
+            TextXAlignment = Enum.TextXAlignment.Left
+        }, header)
+        local function headerButton(text, offset, color)
+            local b = make("TextButton", {
+                AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, offset, 0, 18),
+                Size = UDim2.fromOffset(30, 30), BackgroundColor3 = color,
+                Text = text, Font = Enum.Font.GothamBold, TextSize = 17,
+                TextColor3 = palette.text, AutoButtonColor = false
+            }, header)
+            round(b, 9)
+            return b
+        end
+        local close = headerButton("×", -12, Color3.fromRGB(100, 42, 83))
+        local minimize = headerButton("−", -48, palette.surface)
+        local categories = make("ScrollingFrame", {
+            Position = UDim2.fromOffset(12, 78), Size = UDim2.new(1, -24, 0, 40),
+            BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 0,
+            ScrollingDirection = Enum.ScrollingDirection.X, AutomaticCanvasSize = Enum.AutomaticSize.X,
+            CanvasSize = UDim2.new(), ClipsDescendants = true
+        }, main)
+        make("UIListLayout", {
+            FillDirection = Enum.FillDirection.Horizontal, SortOrder = Enum.SortOrder.LayoutOrder,
+            Padding = UDim.new(0, 7), VerticalAlignment = Enum.VerticalAlignment.Center
+        }, categories)
+        local content = make("ScrollingFrame", {
+            Position = UDim2.fromOffset(12, 126), Size = UDim2.new(1, -24, 1, -140),
+            BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 3,
+            ScrollBarImageColor3 = palette.accent, AutomaticCanvasSize = Enum.AutomaticSize.Y,
+            CanvasSize = UDim2.new(), ScrollingDirection = Enum.ScrollingDirection.Y
+        }, main)
+        make("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 8)}, content)
+        local buttons, pages = {}, {}
+        local function row(name, order)
+            local item = make("Frame", {
+                Name = name, LayoutOrder = order, Size = UDim2.new(1, -5, 0, 48),
+                BackgroundColor3 = palette.panel, BorderSizePixel = 0
+            }, content)
+            round(item, 10)
+            make("UIStroke", {Color = palette.surface, Thickness = 1, Transparency = 0.35}, item)
+            return item
+        end
+        local function label(parent, text, rightSpace)
+            return make("TextLabel", {
+                Position = UDim2.fromOffset(13, 0), Size = UDim2.new(1, -(rightSpace or 20), 1, 0),
+                BackgroundTransparency = 1, Text = text, TextColor3 = palette.text,
+                Font = Enum.Font.GothamMedium, TextSize = 12,
+                TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd
+            }, parent)
+        end
+        local function selectCategory(index)
+            for i, page in ipairs(pages) do
+                page.Visible = i == index
+                tween(buttons[i], {BackgroundColor3 = i == index and palette.accent2 or palette.surface,
+                    TextColor3 = i == index and palette.text or palette.muted})
             end
-            if uiParent:FindFirstChild("KyuzxcMobileAimBtn") then
-                uiParent.KyuzxcMobileAimBtn:Destroy()
-            end
-            notify("Menu closed and unloaded.")
-        end)
-        
-        local minBtn = Instance.new("TextButton")
-        minBtn.Size = UDim2.new(0, 26, 0, 26)
-        minBtn.Position = UDim2.new(1, -64, 0, 7)
-        minBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
-        minBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        minBtn.Text = "-"
-        minBtn.Font = Enum.Font.GothamBold
-        minBtn.TextSize = 14
-        minBtn.Parent = mainFrame
-        
-        local minCorner = Instance.new("UICorner")
-        minCorner.CornerRadius = UDim.new(0, 6)
-        minCorner.Parent = minBtn
-        
-        local catBar = Instance.new("Frame")
-        catBar.Size = UDim2.new(1, -28, 0, 32)
-        catBar.Position = UDim2.new(0, 14, 0, 44)
-        catBar.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
-        catBar.Parent = mainFrame
-        
-        local catBarCorner = Instance.new("UICorner")
-        catBarCorner.CornerRadius = UDim.new(0, 6)
-        catBarCorner.Parent = catBar
-
-        local catLayout = Instance.new("UIListLayout")
-        catLayout.FillDirection = Enum.FillDirection.Horizontal
-        catLayout.SortOrder = Enum.SortOrder.LayoutOrder
-        catLayout.Padding = UDim.new(0, 4)
-        catLayout.Parent = catBar
-        
-        local contentContainer = Instance.new("ScrollingFrame")
-        contentContainer.Size = UDim2.new(1, -28, 1, -92)
-        contentContainer.Position = UDim2.new(0, 14, 0, 84)
-        contentContainer.BackgroundTransparency = 1
-        contentContainer.BorderSizePixel = 0
-        contentContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
-        contentContainer.AutomaticCanvasSize = Enum.AutomaticSize.Y
-        contentContainer.ScrollBarThickness = 2
-        contentContainer.ScrollBarImageColor3 = accentColor
-        contentContainer.Parent = mainFrame
-        
-        local contentLayout = Instance.new("UIListLayout")
-        contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
-        contentLayout.Padding = UDim.new(0, 6)
-        contentLayout.Parent = contentContainer
-        
-        local categoryFrames = {}
-        local categoryButtons = {}
-        local numCategories = #win.Categories
-        
-        for _, cat in ipairs(win.Categories) do
-            local cBtn = Instance.new("TextButton")
-            cBtn.Size = UDim2.new(1 / numCategories, -3, 1, 0)
-            cBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 42)
-            cBtn.TextColor3 = Color3.fromRGB(160, 160, 175)
-            cBtn.Text = cat.Name
-            cBtn.Font = Enum.Font.GothamBold
-            cBtn.TextSize = 10
-            cBtn.Parent = catBar
-            
-            local cCorner = Instance.new("UICorner")
-            cCorner.CornerRadius = UDim.new(0, 5)
-            cCorner.Parent = cBtn
-            
-            local itemHolder = Instance.new("Frame")
-            itemHolder.Size = UDim2.new(1, 0, 0, 0)
-            itemHolder.BackgroundTransparency = 1
-            itemHolder.Visible = false
-            itemHolder.AutomaticSize = Enum.AutomaticSize.Y
-            itemHolder.Parent = contentContainer
-            
-            local itemLayout = Instance.new("UIListLayout")
-            itemLayout.SortOrder = Enum.SortOrder.LayoutOrder
-            itemLayout.Padding = UDim.new(0, 6)
-            itemLayout.Parent = itemHolder
-            
-            for idx, tab in ipairs(cat.Tabs) do
-                local togButton = Instance.new("TextButton")
-                togButton.LayoutOrder = idx * 2
-                togButton.Size = UDim2.new(1, 0, 0, 34)
-                
+            content.CanvasPosition = Vector2.new(0, 0)
+        end
+        -- Every category owns its rows; the active category is the only visible page.
+        for categoryIndex, cat in ipairs(win.Categories) do
+            local categoryButton = make("TextButton", {
+                Name = cat.Name, Size = UDim2.fromOffset(math.max(90, #cat.Name * 8 + 27), 34),
+                BackgroundColor3 = palette.surface, Text = cat.Name,
+                Font = Enum.Font.GothamBold, TextSize = 11,
+                TextColor3 = palette.muted, AutoButtonColor = false
+            }, categories)
+            round(categoryButton, 9)
+            buttons[categoryIndex] = categoryButton
+            local page = make("Frame", {
+                Name = cat.Name .. "Page", Size = UDim2.new(1, 0, 0, 0),
+                AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1,
+                Visible = false, LayoutOrder = categoryIndex
+            }, content)
+            make("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 8)}, page)
+            pages[categoryIndex] = page
+            categoryButton.MouseButton1Click:Connect(function() selectCategory(categoryIndex) end)
+            for index, tab in ipairs(cat.Tabs) do
+                local item = row(tab.Name, index * 2)
+                item.Parent = page
                 if tab.IsButton then
-                    togButton.BackgroundColor3 = Color3.fromRGB(0, 130, 220)
-                    togButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-                    togButton.Text = tab.Name
-                elseif tab.IsSpeedInput or tab.IsFovInput then
-                    togButton.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
-                    togButton.TextColor3 = Color3.fromRGB(200, 200, 200)
-                    togButton.Text = tab.IsSpeedInput and "  Speed Value:" or "  FOV Radius:"
-                    togButton.TextXAlignment = Enum.TextXAlignment.Left
-                    
-                    local textBox = Instance.new("TextBox")
-                    textBox.Size = UDim2.new(0, 75, 0, 24)
-                    textBox.Position = UDim2.new(1, -80, 0.5, -12)
-                    textBox.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
-                    textBox.TextColor3 = accentColor
-                    textBox.Text = tab.IsSpeedInput and tostring(customWalkSpeed) or tostring(fovradius)
-                    textBox.Font = Enum.Font.GothamBold
-                    textBox.TextSize = 11
-                    textBox.Parent = togButton
-                    
-                    local boxCorner = Instance.new("UICorner")
-                    boxCorner.CornerRadius = UDim.new(0, 4)
-                    boxCorner.Parent = textBox
-                    
-                    textBox.FocusLost:Connect(function()
-                        local num = tonumber(textBox.Text)
-                        if num then
-                            if tab.IsSpeedInput then
-                                customWalkSpeed = num
-                                notify("WalkSpeed set to: " .. num)
-                            else
-                                fovradius = num
-                                notify("FOV Radius set to: " .. num)
-                            end
-                            textBox.Text = tostring(num)
-                        else
-                            textBox.Text = tab.IsSpeedInput and tostring(customWalkSpeed) or tostring(fovradius)
-                        end
-                    end)
-                elseif tab.IsPartDropdown then
-                    togButton.BackgroundColor3 = Color3.fromRGB(0, 150, 150)
-                    togButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-                    togButton.Text = "Aim Part: " .. targetPartOption .. " ▼"
-                    
-                    local partFrame = Instance.new("Frame")
-                    partFrame.LayoutOrder = (idx * 2) + 1
-                    partFrame.Size = UDim2.new(1, 0, 0, 96)
-                    partFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
-                    partFrame.BorderSizePixel = 0
-                    partFrame.Visible = false
-                    partFrame.Parent = itemHolder
-                    
-                    local partCorner = Instance.new("UICorner")
-                    partCorner.CornerRadius = UDim.new(0, 6)
-                    partCorner.Parent = partFrame
-
-                    local partLayout = Instance.new("UIListLayout")
-                    partLayout.SortOrder = Enum.SortOrder.LayoutOrder
-                    partLayout.Padding = UDim.new(0, 4)
-                    partLayout.Parent = partFrame
-
-                    local parts = {"Head", "UpperTorso", "HumanoidRootPart"}
-                    for _, ptName in ipairs(parts) do
-                        local pBtn = Instance.new("TextButton")
-                        pBtn.Size = UDim2.new(1, 0, 0, 28)
-                        pBtn.BackgroundColor3 = (targetPartOption == ptName) and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(32, 32, 45)
-                        pBtn.TextColor3 = Color3.fromRGB(235, 235, 235)
-                        pBtn.Text = "Target: " .. ptName
-                        pBtn.Font = Enum.Font.GothamBold
-                        pBtn.TextSize = 11
-                        pBtn.Parent = partFrame
-                        
-                        local pCorner = Instance.new("UICorner")
-                        pCorner.CornerRadius = UDim.new(0, 4)
-                        pCorner.Parent = pBtn
-                        
-                        pBtn.MouseButton1Click:Connect(function()
-                            targetPartOption = ptName
-                            togButton.Text = "Aim Part: " .. ptName .. " ▼"
-                            notify("Aimbot Part set to: " .. ptName)
-                            partFrame.Visible = false
-                        end)
-                    end
-
-                    togButton.MouseButton1Click:Connect(function()
-                        partFrame.Visible = not partFrame.Visible
-                    end)
-                elseif tab.IsSmoothDropdown then
-                    togButton.BackgroundColor3 = Color3.fromRGB(200, 120, 0)
-                    togButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-                    togButton.Text = "Aim Mode: Medium ▼"
-                    
-                    local smoothFrame = Instance.new("Frame")
-                    smoothFrame.LayoutOrder = (idx * 2) + 1
-                    smoothFrame.Size = UDim2.new(1, 0, 0, 128)
-                    smoothFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
-                    smoothFrame.BorderSizePixel = 0
-                    smoothFrame.Visible = false
-                    smoothFrame.Parent = itemHolder
-                    
-                    local smoothCorner = Instance.new("UICorner")
-                    smoothCorner.CornerRadius = UDim.new(0, 6)
-                    smoothCorner.Parent = smoothFrame
-
-                    local smoothLayout = Instance.new("UIListLayout")
-                    smoothLayout.SortOrder = Enum.SortOrder.LayoutOrder
-                    smoothLayout.Padding = UDim.new(0, 4)
-                    smoothLayout.Parent = smoothFrame
-
-                    local modes = {
-                        {Name = "Hard (Instant)", Val = 0},
-                        {Name = "Medium (Balanced)", Val = 0.3},
-                        {Name = "Low (Smooth)", Val = 0.6}
-                    }
-                    for _, mode in ipairs(modes) do
-                        local mBtn = Instance.new("TextButton")
-                        mBtn.Size = UDim2.new(1, 0, 0, 28)
-                        mBtn.BackgroundColor3 = (aimbotSmoothing == mode.Val) and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(32, 32, 45)
-                        mBtn.TextColor3 = Color3.fromRGB(235, 235, 235)
-                        mBtn.Text = mode.Name
-                        mBtn.Font = Enum.Font.GothamBold
-                        mBtn.TextSize = 11
-                        mBtn.Parent = smoothFrame
-                        
-                        local mCorner = Instance.new("UICorner")
-                        mCorner.CornerRadius = UDim.new(0, 4)
-                        mCorner.Parent = mBtn
-                        
-                        mBtn.MouseButton1Click:Connect(function()
-                            aimbotSmoothing = mode.Val
-                            togButton.Text = "Aim Mode: " .. mode.Name .. " ▼"
-                            notify("Aimbot Mode: " .. mode.Name)
-                            smoothFrame.Visible = false
-                        end)
-                    end
-
-                    togButton.MouseButton1Click:Connect(function()
-                        smoothFrame.Visible = not smoothFrame.Visible
-                    end)
-                elseif tab.IsScrollingDropdown then
-                    togButton.BackgroundColor3 = Color3.fromRGB(110, 40, 200)
-                    togButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-                    togButton.Text = "Target: [Select Player] ▼"
-                    
-                    local dropFrame = Instance.new("ScrollingFrame")
-                    dropFrame.LayoutOrder = (idx * 2) + 1
-                    dropFrame.Size = UDim2.new(1, 0, 0, 180)
-                    dropFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
-                    dropFrame.BorderSizePixel = 0
-                    dropFrame.Visible = true
-                    dropFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-                    dropFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
-                    dropFrame.ScrollBarThickness = 3
-                    dropFrame.ScrollBarImageColor3 = Color3.fromRGB(110, 40, 200)
-                    dropFrame.Parent = itemHolder
-                    
-                    local dropCorner = Instance.new("UICorner")
-                    dropCorner.CornerRadius = UDim.new(0, 6)
-                    dropCorner.Parent = dropFrame
-
-                    local dropLayout = Instance.new("UIListLayout")
-                    dropLayout.SortOrder = Enum.SortOrder.LayoutOrder
-                    dropLayout.Padding = UDim.new(0, 4)
-                    dropLayout.Parent = dropFrame
-                    
-                    local function refreshPlayerList()
-                        for _, child in ipairs(dropFrame:GetChildren()) do
-                            if child:IsA("TextButton") then
-                                child:Destroy()
-                            end
-                        end
-                        
-                        local refreshBtn = Instance.new("TextButton")
-                        refreshBtn.Size = UDim2.new(1, 0, 0, 28)
-                        refreshBtn.BackgroundColor3 = Color3.fromRGB(0, 110, 180)
-                        refreshBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-                        refreshBtn.Text = "↻ Refresh Player List"
-                        refreshBtn.Font = Enum.Font.GothamBold
-                        refreshBtn.TextSize = 11
-                        refreshBtn.Parent = dropFrame
-                        
-                        local refCorner = Instance.new("UICorner")
-                        refCorner.CornerRadius = UDim.new(0, 4)
-                        refCorner.Parent = refreshBtn
-                        
-                        refreshBtn.MouseButton1Click:Connect(function()
-                            refreshPlayerList()
-                            notify("Player list refreshed!")
-                        end)
-                        
-                        for _, p in ipairs(Players:GetPlayers()) do
-                            if p ~= player then
-                                local pBtn = Instance.new("TextButton")
-                                pBtn.Size = UDim2.new(1, 0, 0, 28)
-                                pBtn.BackgroundColor3 = (selectedTargetPlayer == p) and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(32, 32, 45)
-                                pBtn.TextColor3 = Color3.fromRGB(235, 235, 235)
-                                pBtn.Text = p.DisplayName .. " (@" .. p.Name .. ")"
-                                pBtn.Font = Enum.Font.GothamBold
-                                pBtn.TextSize = 11
-                                pBtn.Parent = dropFrame
-                                
-                                local pCorner = Instance.new("UICorner")
-                                pCorner.CornerRadius = UDim.new(0, 4)
-                                pCorner.Parent = pBtn
-                                
-                                pBtn.MouseButton1Click:Connect(function()
-                                    selectedTargetPlayer = p
-                                    togButton.Text = "Target: " .. p.Name .. " ▼"
-                                    refreshPlayerList()
-                                    notify("Target selected: " .. p.Name)
-                                end)
-                            end
-                        end
-                    end
-                    
-                    refreshPlayerList()
-                    Players.PlayerAdded:Connect(refreshPlayerList)
-                    Players.PlayerRemoving:Connect(function(leavingPlayer)
-                        if selectedTargetPlayer == leavingPlayer then
-                            selectedTargetPlayer = nil
-                            togButton.Text = "Target: [Select Player] ▼"
-                        end
-                        refreshPlayerList()
-                    end)
-                    
-                    togButton.MouseButton1Click:Connect(function()
-                        dropFrame.Visible = not dropFrame.Visible
-                        if dropFrame.Visible then
-                            refreshPlayerList()
-                        end
-                    end)
-                else
-                    togButton.BackgroundColor3 = tab.State and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(28, 28, 38)
-                    togButton.TextColor3 = tab.State and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(180, 180, 190)
-                    togButton.Text = "  " .. tab.Name .. " : " .. (tab.State and "ON" or "OFF")
-                    togButton.TextXAlignment = Enum.TextXAlignment.Left
-                end
-                
-                if not tab.IsSpeedInput and not tab.IsFovInput and not tab.IsScrollingDropdown and not tab.IsPartDropdown and not tab.IsSmoothDropdown and not tab.IsButton then
-                    local pad = Instance.new("UIPadding")
-                    pad.PaddingLeft = UDim.new(0, 6)
-                    pad.Parent = togButton
-                end
-
-                if not tab.IsSpeedInput and not tab.IsFovInput then
-                    togButton.Font = Enum.Font.GothamBold
-                    togButton.TextSize = 11
-                end
-                togButton.Parent = itemHolder
-                
-                local corner = Instance.new("UICorner")
-                corner.CornerRadius = UDim.new(0, 6)
-                corner.Parent = togButton
-                
-                local currentState = tab.State
-                if not tab.IsButton and not tab.IsScrollingDropdown and not tab.IsPartDropdown and not tab.IsSmoothDropdown and not tab.IsSpeedInput and not tab.IsFovInput then
-                    togButton.MouseButton1Click:Connect(function()
-                        currentState = not currentState
-                        togButton.Text = "  " .. tab.Name .. " : " .. (currentState and "ON" or "OFF")
-                        togButton.BackgroundColor3 = currentState and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(28, 28, 38)
-                        togButton.TextColor3 = currentState and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(180, 180, 190)
-                        if tab.Callback then tab.Callback(currentState) end
-                    end)
-                elseif tab.IsButton then
-                    togButton.MouseButton1Click:Connect(function()
+                    local action = make("TextButton", {
+                        Size = UDim2.new(1, -12, 1, -10), Position = UDim2.fromOffset(6, 5),
+                        BackgroundColor3 = palette.accent2, Text = tab.Name .. "  →",
+                        Font = Enum.Font.GothamBold, TextSize = 12,
+                        TextColor3 = palette.text, AutoButtonColor = false
+                    }, item)
+                    round(action, 8)
+                    action.MouseButton1Click:Connect(function()
+                        tween(action, {BackgroundColor3 = palette.accent})
+                        task.delay(0.2, function() if action.Parent then tween(action, {BackgroundColor3 = palette.accent2}) end end)
                         if tab.Callback then tab.Callback() end
                     end)
+                elseif tab.IsSpeedInput or tab.IsFovInput then
+                    label(item, tab.IsSpeedInput and "Speed value" or "FOV radius", 110)
+                    local input = make("TextBox", {
+                        AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0),
+                        Size = UDim2.fromOffset(82, 30), BackgroundColor3 = palette.surface,
+                        Text = tostring(tab.IsSpeedInput and customWalkSpeed or fovradius),
+                        TextColor3 = palette.text, Font = Enum.Font.GothamBold,
+                        TextSize = 12, ClearTextOnFocus = false
+                    }, item)
+                    round(input, 7)
+                    input.FocusLost:Connect(function()
+                        local value = tonumber(input.Text)
+                        if value and value == value then
+                            value = math.clamp(value, 1, 1000)
+                            if tab.IsSpeedInput then customWalkSpeed = value else fovradius = value end
+                        end
+                        input.Text = tostring(tab.IsSpeedInput and customWalkSpeed or fovradius)
+                    end)
+                elseif tab.IsScrollingDropdown or tab.IsPartDropdown or tab.IsSmoothDropdown then
+                    local trigger = make("TextButton", {
+                        Size = UDim2.new(1, -20, 1, 0), Position = UDim2.fromOffset(10, 0),
+                        BackgroundTransparency = 1, TextColor3 = palette.text,
+                        Text = tab.Name .. "  ▾", TextXAlignment = Enum.TextXAlignment.Left,
+                        Font = Enum.Font.GothamMedium, TextSize = 12
+                    }, item)
+                    local list = make("ScrollingFrame", {
+                        LayoutOrder = index * 2 + 1, Size = UDim2.new(1, -5, 0, 0),
+                        BackgroundColor3 = palette.panel, BorderSizePixel = 0,
+                        CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y,
+                        ScrollBarThickness = 3, ScrollBarImageColor3 = palette.accent,
+                        Visible = false
+                    }, page)
+                    round(list, 10)
+                    make("UIPadding", {PaddingTop = UDim.new(0, 5), PaddingBottom = UDim.new(0, 5),
+                        PaddingLeft = UDim.new(0, 5), PaddingRight = UDim.new(0, 8)}, list)
+                    make("UIListLayout", {Padding = UDim.new(0, 5), SortOrder = Enum.SortOrder.LayoutOrder}, list)
+                    local function option(text, callback)
+                        local b = make("TextButton", {
+                            Size = UDim2.new(1, 0, 0, 32), BackgroundColor3 = palette.surface,
+                            Text = text, TextColor3 = palette.text,
+                            Font = Enum.Font.GothamMedium, TextSize = 11, AutoButtonColor = false
+                        }, list)
+                        round(b, 7)
+                        b.MouseButton1Click:Connect(function()
+                            callback()
+                            list.Visible = false
+                            list.Size = UDim2.new(1, -5, 0, 0)
+                        end)
+                    end
+                    local function refresh()
+                        for _, child in ipairs(list:GetChildren()) do
+                            if child:IsA("TextButton") then child:Destroy() end
+                        end
+                        if tab.IsPartDropdown then
+                            for _, part in ipairs({"Head", "UpperTorso", "HumanoidRootPart"}) do
+                                option(part, function() targetPartOption = part; trigger.Text = "Aim part: " .. part .. "  ▾" end)
+                            end
+                        elseif tab.IsSmoothDropdown then
+                            for _, mode in ipairs({{name="Hard (Instant)", value=0},
+                                {name="Medium (Balanced)", value=0.3}, {name="Low (Smooth)", value=0.6}}) do
+                                option(mode.name, function() aimbotSmoothing = mode.value; trigger.Text = "Aim mode: " .. mode.name .. "  ▾" end)
+                            end
+                        else
+                            option("↻  Refresh players", function() task.defer(refresh) end)
+                            for _, other in ipairs(Players:GetPlayers()) do
+                                if other ~= player then
+                                    option(other.DisplayName .. "  (@" .. other.Name .. ")", function()
+                                        selectedTargetPlayer = other
+                                        trigger.Text = "Target: " .. other.Name .. "  ▾"
+                                    end)
+                                end
+                            end
+                        end
+                    end
+                    trigger.MouseButton1Click:Connect(function()
+                        local open = not list.Visible
+                        if open then refresh() end
+                        list.Visible = open
+                        list.Size = UDim2.new(1, -5, 0, open and (tab.IsScrollingDropdown and 175 or 125) or 0)
+                    end)
+                else
+                    label(item, tab.Name, 94)
+                    local track = make("TextButton", {
+                        AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -13, 0.5, 0),
+                        Size = UDim2.fromOffset(49, 25), BackgroundColor3 = tab.State and palette.accent2 or palette.off,
+                        Text = "", AutoButtonColor = false
+                    }, item)
+                    round(track, 13)
+                    local dot = make("Frame", {
+                        Size = UDim2.fromOffset(19, 19), Position = UDim2.fromOffset(tab.State and 27 or 3, 3),
+                        BackgroundColor3 = palette.text, BorderSizePixel = 0
+                    }, track)
+                    round(dot, 10)
+                    local state = tab.State
+                    track.MouseButton1Click:Connect(function()
+                        state = not state
+                        tab.State = state
+                        tween(track, {BackgroundColor3 = state and palette.accent2 or palette.off})
+                        tween(dot, {Position = UDim2.fromOffset(state and 27 or 3, 3)})
+                        if tab.Callback then tab.Callback(state) end
+                    end)
                 end
             end
-            
-            table.insert(categoryFrames, itemHolder)
-            table.insert(categoryButtons, cBtn)
-            
-            cBtn.MouseButton1Click:Connect(function()
-                for _, holder in ipairs(categoryFrames) do holder.Visible = false end
-                for _, btn in ipairs(categoryButtons) do 
-                    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 42)
-                    btn.TextColor3 = Color3.fromRGB(160, 160, 175)
-                end
-                itemHolder.Visible = true
-                cBtn.BackgroundColor3 = accentColor
-                cBtn.TextColor3 = Color3.fromRGB(18, 18, 24)
-            end)
         end
-        
-        if categoryFrames[1] then
-            categoryFrames[1].Visible = true
-            categoryButtons[1].BackgroundColor3 = accentColor
-            categoryButtons[1].TextColor3 = Color3.fromRGB(18, 18, 24)
-        end
-        
+        if #pages > 0 then selectCategory(1) end
         local minimized = false
-        local elementsToHide = {catBar, contentContainer}
-        minBtn.MouseButton1Click:Connect(function()
+        minimize.MouseButton1Click:Connect(function()
             minimized = not minimized
-            for _, el in ipairs(elementsToHide) do
-                el.Visible = not minimized
-            end
-            mainFrame.Size = minimized and UDim2.new(0, 290, 0, 44) or UDim2.new(0, 290, 0, 440)
-            minBtn.Text = minimized and "+" or "-"
+            categories.Visible = not minimized
+            content.Visible = not minimized
+            minimize.Text = minimized and "+" or "−"
+            tween(main, {Size = UDim2.fromOffset(width, minimized and 68 or expandedHeight)})
         end)
+        close.MouseButton1Click:Connect(function()
+            screenGui:Destroy()
+            local visuals = uiParent:FindFirstChild("KyuzxcVisualsGui")
+            if visuals then visuals:Destroy() end
+            local aim = uiParent:FindFirstChild("KyuzxcMobileAimBtn")
+            if aim then aim:Destroy() end
+            notify("Menu closed.")
+        end)
+        -- Drag only by the header so scrolling and toggle interactions remain reliable.
+        local dragging, dragInput, dragStart, initialPosition = false, nil, nil, nil
+        header.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                dragging = true
+                dragStart = input.Position
+                initialPosition = main.Position
+                input.Changed:Connect(function()
+                    if input.UserInputState == Enum.UserInputState.End then dragging = false end
+                end)
+            end
+        end)
+        header.InputChanged:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+                dragInput = input
+            end
+        end)
+        UserInputService.InputChanged:Connect(function(input)
+            if dragging and input == dragInput then
+                local delta = input.Position - dragStart
+                main.Position = UDim2.new(initialPosition.X.Scale, initialPosition.X.Offset + delta.X,
+                    initialPosition.Y.Scale, initialPosition.Y.Offset + delta.Y)
+            end
+        end)
+        local function resize()
+            local size = workspace.CurrentCamera.ViewportSize
+            width = math.min(size.X < 650 and 355 or 475, math.max(260, size.X - 24))
+            expandedHeight = math.min(size.X < 650 and 480 or 550, math.max(250, size.Y - 36))
+            main.Size = UDim2.fromOffset(width, minimized and 68 or expandedHeight)
+        end
+        workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(resize)
     end
 end
 
