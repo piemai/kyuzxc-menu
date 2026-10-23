@@ -1216,7 +1216,7 @@ catMisc:CreateTab("server hop (new server)", {isButton = true}, function()
 end)
 
 Library:Load()
-notify("kyuzxc menu v2.7 (Extended) loaded successfully!")
+notify("kyuzxc menu v2.8 (Fixed Toggle) loaded successfully!")
 
 UserInputService.InputBegan:Connect(function(input, gp)
     if input.KeyCode == Enum.KeyCode.Delete then
@@ -1260,11 +1260,11 @@ local function isPlayerTeammate(p)
     return false
 end
 
--- Auto-Clicker Background Loop
+-- Auto-Clicker Background Loop (Fixed Panic & Stable State)
 task.spawn(function()
     while true do
         task.wait(autoClickerInterval)
-        if autoClickerEnabled and not panicEnabled then
+        if not panicEnabled and autoClickerEnabled then
             pcall(function()
                 VirtualUser:Button1Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
                 task.wait(0.05)
