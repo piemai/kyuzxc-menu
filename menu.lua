@@ -1,4 +1,4 @@
---// Kyuzxc Simple Mod Menu (iPad Edition + Fully Fixed Callbacks for Inf Jump & Speed)
+--// Kyuzxc Simple Mod Menu (iPad Edition + Fixed Minimize & Max ESP Distance Cache)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -33,13 +33,14 @@ local function notify(msg)
 end
 
 --// Feature States
-local showteam = false
-local showenemy = false
-local espenabled = false
-local boxenabled = false
-local skeletonenabled = false
-local tracerenabled = false
-local showdist = false
+local showteam = true
+local showenemy = true
+local espenabled = true
+local boxenabled = true
+local skeletonenabled = true
+local tracerenabled = true
+local showdist = true
+local maxEspDistance = 300 -- Max distance in studs para hindi mag-freeze o maiwan ang ESP
 local noclipped = false
 local infjumpenabled = false
 local speedenabled = false
@@ -57,9 +58,9 @@ local selectedTargetPlayer = nil
 --// ESP Colors & Theme
 local teamColor = Color3.fromRGB(0, 255, 120)  -- Green (Team)
 local enemyColor = Color3.fromRGB(255, 75, 75) -- Red (Enemy)
-local accentColor = Color3.fromRGB(168, 85, 247)
+local accentColor = Color3.fromRGB(0, 255, 128)
 
---// Floating Draggable Mobile Aimbot Toggle Button (Center Default)
+--// Floating Draggable Mobile Aimbot Toggle Button
 local mobileGui = Instance.new("ScreenGui")
 mobileGui.Name = "KyuzxcMobileAimBtn"
 mobileGui.ResetOnSpawn = false
@@ -182,6 +183,7 @@ function Library:CreateWindow(title)
                 IsScrollingDropdown = config and config.isScrollingDropdown or false,
                 IsSpeedInput = config and config.isSpeedInput or false,
                 IsFovInput = config and config.isFovInput or false,
+                IsMaxDistInput = config and config.isMaxDistInput or false,
                 IsPartDropdown = config and config.isPartDropdown or false,
                 IsSmoothDropdown = config and config.isSmoothDropdown or false
             })
@@ -204,21 +206,13 @@ function Library:Load()
     
     for _, win in ipairs(self.Windows) do
         local mainFrame = Instance.new("Frame")
-        local viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(900, 700)
-        local initialWidth = math.clamp(math.floor(viewport.X * 0.38), 300, 460)
-        local initialHeight = math.clamp(math.floor(viewport.Y * 0.72), 320, 600)
-        mainFrame.Size = UDim2.fromOffset(initialWidth, initialHeight)
-        mainFrame.Position = UDim2.new(0.5, -initialWidth / 2, 0.5, -initialHeight / 2)
-        mainFrame.BackgroundColor3 = Color3.fromRGB(17, 13, 28)
+        mainFrame.Size = UDim2.new(0, 290, 0, 440)
+        mainFrame.Position = UDim2.new(0.5, -145, 0.3, -220)
+        mainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
         mainFrame.BorderSizePixel = 0
         mainFrame.Active = true
-        mainFrame.ClipsDescendants = false
+        mainFrame.Draggable = true
         mainFrame.Parent = screenGui
-
-        local sizeConstraint = Instance.new("UISizeConstraint")
-        sizeConstraint.MinSize = Vector2.new(280, 280)
-        sizeConstraint.MaxSize = Vector2.new(720, 820)
-        sizeConstraint.Parent = mainFrame
         
         local mainCorner = Instance.new("UICorner")
         mainCorner.CornerRadius = UDim.new(0, 8)
@@ -231,9 +225,8 @@ function Library:Load()
         stroke.Parent = mainFrame
 
         local titleBar = Instance.new("TextLabel")
-        titleBar.Size = UDim2.new(1, -104, 0, 40)
+        titleBar.Size = UDim2.new(1, -70, 0, 40)
         titleBar.BackgroundTransparency = 1
-        titleBar.Active = true
         titleBar.TextColor3 = accentColor
         titleBar.Font = Enum.Font.GothamBold
         titleBar.TextSize = 13
@@ -241,30 +234,6 @@ function Library:Load()
         titleBar.Position = UDim2.new(0, 14, 0, 0)
         titleBar.Text = "  " .. string.upper(win.Title)
         titleBar.Parent = mainFrame
-
-        -- Header drag works with mouse and touch.
-        local dragActive, dragInput, dragStart, dragOrigin = false, nil, nil, nil
-        titleBar.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                dragActive = true
-                dragStart = input.Position
-                dragOrigin = mainFrame.Position
-                input.Changed:Connect(function()
-                    if input.UserInputState == Enum.UserInputState.End then dragActive = false end
-                end)
-            end
-        end)
-        titleBar.InputChanged:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-                dragInput = input
-            end
-        end)
-        UserInputService.InputChanged:Connect(function(input)
-            if dragActive and (input == dragInput or input.UserInputType == Enum.UserInputType.MouseMovement) then
-                local delta = input.Position - dragStart
-                mainFrame.Position = UDim2.new(dragOrigin.X.Scale, dragOrigin.X.Offset + delta.X, dragOrigin.Y.Scale, dragOrigin.Y.Offset + delta.Y)
-            end
-        end)
         
         local closeBtn = Instance.new("TextButton")
         closeBtn.Size = UDim2.new(0, 26, 0, 26)
@@ -294,7 +263,7 @@ function Library:Load()
         local minBtn = Instance.new("TextButton")
         minBtn.Size = UDim2.new(0, 26, 0, 26)
         minBtn.Position = UDim2.new(1, -64, 0, 7)
-        minBtn.BackgroundColor3 = Color3.fromRGB(66, 47, 91)
+        minBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
         minBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
         minBtn.Text = "-"
         minBtn.Font = Enum.Font.GothamBold
@@ -308,7 +277,7 @@ function Library:Load()
         local catBar = Instance.new("Frame")
         catBar.Size = UDim2.new(1, -28, 0, 32)
         catBar.Position = UDim2.new(0, 14, 0, 44)
-        catBar.BackgroundColor3 = Color3.fromRGB(34, 24, 52)
+        catBar.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
         catBar.Parent = mainFrame
         
         local catBarCorner = Instance.new("UICorner")
@@ -331,45 +300,6 @@ function Library:Load()
         contentContainer.ScrollBarThickness = 2
         contentContainer.ScrollBarImageColor3 = accentColor
         contentContainer.Parent = mainFrame
-
-        local resizeGrip = Instance.new("TextButton")
-        resizeGrip.Name = "ResizeGrip"
-        resizeGrip.Size = UDim2.fromOffset(22, 22)
-        resizeGrip.AnchorPoint = Vector2.new(1, 1)
-        resizeGrip.Position = UDim2.new(1, -4, 1, -4)
-        resizeGrip.BackgroundColor3 = Color3.fromRGB(124, 58, 237)
-        resizeGrip.Text = "◢"
-        resizeGrip.TextColor3 = Color3.fromRGB(245, 240, 255)
-        resizeGrip.Font = Enum.Font.GothamBold
-        resizeGrip.TextSize = 13
-        resizeGrip.AutoButtonColor = true
-        resizeGrip.ZIndex = 5
-        resizeGrip.Parent = mainFrame
-        local gripCorner = Instance.new("UICorner")
-        gripCorner.CornerRadius = UDim.new(0, 6)
-        gripCorner.Parent = resizeGrip
-
-        local resizing, resizeStart, sizeStart = false, nil, nil
-        resizeGrip.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                resizing = true
-                resizeStart = input.Position
-                sizeStart = mainFrame.AbsoluteSize
-                input.Changed:Connect(function()
-                    if input.UserInputState == Enum.UserInputState.End then resizing = false end
-                end)
-            end
-        end)
-        UserInputService.InputChanged:Connect(function(input)
-            if resizing and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-                local delta = input.Position - resizeStart
-                local maxW = math.max(280, math.min(720, viewport.X - 24))
-                local maxH = math.max(280, math.min(820, viewport.Y - 24))
-                local newW = math.clamp(sizeStart.X + delta.X, 280, maxW)
-                local newH = math.clamp(sizeStart.Y + delta.Y, 280, maxH)
-                mainFrame.Size = UDim2.fromOffset(newW, newH)
-            end
-        end)
         
         local contentLayout = Instance.new("UIListLayout")
         contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -383,11 +313,11 @@ function Library:Load()
         for _, cat in ipairs(win.Categories) do
             local cBtn = Instance.new("TextButton")
             cBtn.Size = UDim2.new(1 / numCategories, -3, 1, 0)
-            cBtn.BackgroundColor3 = Color3.fromRGB(39, 29, 59)
+            cBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 42)
             cBtn.TextColor3 = Color3.fromRGB(160, 160, 175)
             cBtn.Text = cat.Name
             cBtn.Font = Enum.Font.GothamBold
-            cBtn.TextSize = 11
+            cBtn.TextSize = 10
             cBtn.Parent = catBar
             
             local cCorner = Instance.new("UICorner")
@@ -412,13 +342,19 @@ function Library:Load()
                 togButton.Size = UDim2.new(1, 0, 0, 34)
                 
                 if tab.IsButton then
-                    togButton.BackgroundColor3 = Color3.fromRGB(124, 58, 237)
+                    togButton.BackgroundColor3 = Color3.fromRGB(0, 130, 220)
                     togButton.TextColor3 = Color3.fromRGB(255, 255, 255)
                     togButton.Text = tab.Name
-                elseif tab.IsSpeedInput or tab.IsFovInput then
-                    togButton.BackgroundColor3 = Color3.fromRGB(31, 24, 45)
+                elseif tab.IsSpeedInput or tab.IsFovInput or tab.IsMaxDistInput then
+                    togButton.BackgroundColor3 = Color3.fromRGB(28, 28, 38)
                     togButton.TextColor3 = Color3.fromRGB(200, 200, 200)
-                    togButton.Text = tab.IsSpeedInput and "  Speed Value:" or "  FOV Radius:"
+                    if tab.IsSpeedInput then
+                        togButton.Text = "  Speed Value:"
+                    elseif tab.IsFovInput then
+                        togButton.Text = "  FOV Radius:"
+                    else
+                        togButton.Text = "  Max ESP Dist:"
+                    end
                     togButton.TextXAlignment = Enum.TextXAlignment.Left
                     
                     local textBox = Instance.new("TextBox")
@@ -426,7 +362,13 @@ function Library:Load()
                     textBox.Position = UDim2.new(1, -80, 0.5, -12)
                     textBox.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
                     textBox.TextColor3 = accentColor
-                    textBox.Text = tab.IsSpeedInput and tostring(customWalkSpeed) or tostring(fovradius)
+                    if tab.IsSpeedInput then
+                        textBox.Text = tostring(customWalkSpeed)
+                    elseif tab.IsFovInput then
+                        textBox.Text = tostring(fovradius)
+                    else
+                        textBox.Text = tostring(maxEspDistance)
+                    end
                     textBox.Font = Enum.Font.GothamBold
                     textBox.TextSize = 11
                     textBox.Parent = togButton
@@ -441,24 +383,33 @@ function Library:Load()
                             if tab.IsSpeedInput then
                                 customWalkSpeed = num
                                 notify("WalkSpeed set to: " .. num)
-                            else
+                            elseif tab.IsFovInput then
                                 fovradius = num
                                 notify("FOV Radius set to: " .. num)
+                            else
+                                maxEspDistance = num
+                                notify("Max ESP Distance set to: " .. num)
                             end
                             textBox.Text = tostring(num)
                         else
-                            textBox.Text = tab.IsSpeedInput and tostring(customWalkSpeed) or tostring(fovradius)
+                            if tab.IsSpeedInput then
+                                textBox.Text = tostring(customWalkSpeed)
+                            elseif tab.IsFovInput then
+                                textBox.Text = tostring(fovradius)
+                            else
+                                textBox.Text = tostring(maxEspDistance)
+                            end
                         end
                     end)
                 elseif tab.IsPartDropdown then
-                    togButton.BackgroundColor3 = Color3.fromRGB(109, 40, 217)
+                    togButton.BackgroundColor3 = Color3.fromRGB(0, 150, 150)
                     togButton.TextColor3 = Color3.fromRGB(255, 255, 255)
                     togButton.Text = "Aim Part: " .. targetPartOption .. " ▼"
                     
                     local partFrame = Instance.new("Frame")
                     partFrame.LayoutOrder = (idx * 2) + 1
                     partFrame.Size = UDim2.new(1, 0, 0, 96)
-                    partFrame.BackgroundColor3 = Color3.fromRGB(27, 20, 40)
+                    partFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
                     partFrame.BorderSizePixel = 0
                     partFrame.Visible = false
                     partFrame.Parent = itemHolder
@@ -476,7 +427,7 @@ function Library:Load()
                     for _, ptName in ipairs(parts) do
                         local pBtn = Instance.new("TextButton")
                         pBtn.Size = UDim2.new(1, 0, 0, 28)
-                        pBtn.BackgroundColor3 = (targetPartOption == ptName) and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(43, 32, 61)
+                        pBtn.BackgroundColor3 = (targetPartOption == ptName) and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(32, 32, 45)
                         pBtn.TextColor3 = Color3.fromRGB(235, 235, 235)
                         pBtn.Text = "Target: " .. ptName
                         pBtn.Font = Enum.Font.GothamBold
@@ -506,7 +457,7 @@ function Library:Load()
                     local smoothFrame = Instance.new("Frame")
                     smoothFrame.LayoutOrder = (idx * 2) + 1
                     smoothFrame.Size = UDim2.new(1, 0, 0, 128)
-                    smoothFrame.BackgroundColor3 = Color3.fromRGB(27, 20, 40)
+                    smoothFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
                     smoothFrame.BorderSizePixel = 0
                     smoothFrame.Visible = false
                     smoothFrame.Parent = itemHolder
@@ -528,7 +479,7 @@ function Library:Load()
                     for _, mode in ipairs(modes) do
                         local mBtn = Instance.new("TextButton")
                         mBtn.Size = UDim2.new(1, 0, 0, 28)
-                        mBtn.BackgroundColor3 = (aimbotSmoothing == mode.Val) and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(43, 32, 61)
+                        mBtn.BackgroundColor3 = (aimbotSmoothing == mode.Val) and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(32, 32, 45)
                         mBtn.TextColor3 = Color3.fromRGB(235, 235, 235)
                         mBtn.Text = mode.Name
                         mBtn.Font = Enum.Font.GothamBold
@@ -551,20 +502,20 @@ function Library:Load()
                         smoothFrame.Visible = not smoothFrame.Visible
                     end)
                 elseif tab.IsScrollingDropdown then
-                    togButton.BackgroundColor3 = Color3.fromRGB(139, 92, 246)
+                    togButton.BackgroundColor3 = Color3.fromRGB(110, 40, 200)
                     togButton.TextColor3 = Color3.fromRGB(255, 255, 255)
                     togButton.Text = "Target: [Select Player] ▼"
                     
                     local dropFrame = Instance.new("ScrollingFrame")
                     dropFrame.LayoutOrder = (idx * 2) + 1
                     dropFrame.Size = UDim2.new(1, 0, 0, 180)
-                    dropFrame.BackgroundColor3 = Color3.fromRGB(27, 20, 40)
+                    dropFrame.BackgroundColor3 = Color3.fromRGB(22, 22, 30)
                     dropFrame.BorderSizePixel = 0
                     dropFrame.Visible = true
                     dropFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
                     dropFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
                     dropFrame.ScrollBarThickness = 3
-                    dropFrame.ScrollBarImageColor3 = Color3.fromRGB(139, 92, 246)
+                    dropFrame.ScrollBarImageColor3 = Color3.fromRGB(110, 40, 200)
                     dropFrame.Parent = itemHolder
                     
                     local dropCorner = Instance.new("UICorner")
@@ -585,7 +536,7 @@ function Library:Load()
                         
                         local refreshBtn = Instance.new("TextButton")
                         refreshBtn.Size = UDim2.new(1, 0, 0, 28)
-                        refreshBtn.BackgroundColor3 = Color3.fromRGB(124, 58, 237)
+                        refreshBtn.BackgroundColor3 = Color3.fromRGB(0, 110, 180)
                         refreshBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
                         refreshBtn.Text = "↻ Refresh Player List"
                         refreshBtn.Font = Enum.Font.GothamBold
@@ -605,7 +556,7 @@ function Library:Load()
                             if p ~= player then
                                 local pBtn = Instance.new("TextButton")
                                 pBtn.Size = UDim2.new(1, 0, 0, 28)
-                                pBtn.BackgroundColor3 = (selectedTargetPlayer == p) and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(43, 32, 61)
+                                pBtn.BackgroundColor3 = (selectedTargetPlayer == p) and Color3.fromRGB(0, 180, 90) or Color3.fromRGB(32, 32, 45)
                                 pBtn.TextColor3 = Color3.fromRGB(235, 235, 235)
                                 pBtn.Text = p.DisplayName .. " (@" .. p.Name .. ")"
                                 pBtn.Font = Enum.Font.GothamBold
@@ -643,19 +594,19 @@ function Library:Load()
                         end
                     end)
                 else
-                    togButton.BackgroundColor3 = tab.State and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(31, 24, 45)
+                    togButton.BackgroundColor3 = tab.State and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(28, 28, 38)
                     togButton.TextColor3 = tab.State and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(180, 180, 190)
                     togButton.Text = "  " .. tab.Name .. " : " .. (tab.State and "ON" or "OFF")
                     togButton.TextXAlignment = Enum.TextXAlignment.Left
                 end
                 
-                if not tab.IsSpeedInput and not tab.IsFovInput and not tab.IsScrollingDropdown and not tab.IsPartDropdown and not tab.IsSmoothDropdown and not tab.IsButton then
+                if not tab.IsSpeedInput and not tab.IsFovInput and not tab.IsMaxDistInput and not tab.IsScrollingDropdown and not tab.IsPartDropdown and not tab.IsSmoothDropdown and not tab.IsButton then
                     local pad = Instance.new("UIPadding")
                     pad.PaddingLeft = UDim.new(0, 6)
                     pad.Parent = togButton
                 end
 
-                if not tab.IsSpeedInput and not tab.IsFovInput then
+                if not tab.IsSpeedInput and not tab.IsFovInput and not tab.IsMaxDistInput then
                     togButton.Font = Enum.Font.GothamBold
                     togButton.TextSize = 11
                 end
@@ -666,11 +617,11 @@ function Library:Load()
                 corner.Parent = togButton
                 
                 local currentState = tab.State
-                if not tab.IsButton and not tab.IsScrollingDropdown and not tab.IsPartDropdown and not tab.IsSmoothDropdown and not tab.IsSpeedInput and not tab.IsFovInput then
+                if not tab.IsButton and not tab.IsScrollingDropdown and not tab.IsPartDropdown and not tab.IsSmoothDropdown and not tab.IsSpeedInput and not tab.IsFovInput and not tab.IsMaxDistInput then
                     togButton.MouseButton1Click:Connect(function()
                         currentState = not currentState
                         togButton.Text = "  " .. tab.Name .. " : " .. (currentState and "ON" or "OFF")
-                        togButton.BackgroundColor3 = currentState and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(31, 24, 45)
+                        togButton.BackgroundColor3 = currentState and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(28, 28, 38)
                         togButton.TextColor3 = currentState and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(180, 180, 190)
                         if tab.Callback then tab.Callback(currentState) end
                     end)
@@ -687,7 +638,7 @@ function Library:Load()
             cBtn.MouseButton1Click:Connect(function()
                 for _, holder in ipairs(categoryFrames) do holder.Visible = false end
                 for _, btn in ipairs(categoryButtons) do 
-                    btn.BackgroundColor3 = Color3.fromRGB(39, 29, 59)
+                    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 42)
                     btn.TextColor3 = Color3.fromRGB(160, 160, 175)
                 end
                 itemHolder.Visible = true
@@ -702,27 +653,14 @@ function Library:Load()
             categoryButtons[1].TextColor3 = Color3.fromRGB(18, 18, 24)
         end
         
+        --// Fixed Minimize / Maximize Logic
         local minimized = false
-        local expandedSize = mainFrame.Size
-        local expandedMinSize = sizeConstraint.MinSize
-        local elementsToHide = {catBar, contentContainer, resizeGrip}
-        minBtn.Activated:Connect(function()
+        minBtn.MouseButton1Click:Connect(function()
             minimized = not minimized
-            if minimized then
-                -- Save the current size before collapsing. The original UISizeConstraint
-                -- enforced a 280px minimum height, which prevented the window shrinking.
-                expandedSize = mainFrame.Size
-                expandedMinSize = sizeConstraint.MinSize
-                sizeConstraint.MinSize = Vector2.new(280, 44)
-                for _, el in ipairs(elementsToHide) do el.Visible = false end
-                mainFrame.Size = UDim2.fromOffset(math.max(280, mainFrame.AbsoluteSize.X), 44)
-                resizeGrip.Visible = false
-            else
-                sizeConstraint.MinSize = expandedMinSize
-                mainFrame.Size = expandedSize
-                for _, el in ipairs(elementsToHide) do el.Visible = true end
-            end
-            minBtn.Text = minimized and "+" or "−"
+            catBar.Visible = not minimized
+            contentContainer.Visible = not minimized
+            mainFrame.Size = minimized and UDim2.new(0, 290, 0, 44) or UDim2.new(0, 290, 0, 440)
+            minBtn.Text = minimized and "+" or "-"
         end)
     end
 end
@@ -739,7 +677,9 @@ catMovement:CreateTab("noclip", {enabled = false}, function(tog)
         end
     end
 end)
-catMovement:CreateTab("inf jump", {enabled = false}, function(tog) infjumpenabled = tog end) 
+catMovement:CreateTab("inf jump", {enabled = false}, function(tog) 
+    infjumpenabled = tog 
+end) 
 catMovement:CreateTab("speed hack", {enabled = false}, function(tog) 
     speedenabled = tog 
     if not tog and player.Character then
@@ -748,18 +688,23 @@ catMovement:CreateTab("speed hack", {enabled = false}, function(tog)
     end
 end)
 catMovement:CreateTab("speed value", {isSpeedInput = true})
-catMovement:CreateTab("fly", {enabled = false}, function(tog) flyenabled = tog end)
-catMovement:CreateTab("god mode", {enabled = false}, function(tog) godmodeenabled = tog end)
+catMovement:CreateTab("fly", {enabled = false}, function(tog) 
+    flyenabled = tog 
+end)
+catMovement:CreateTab("god mode", {enabled = false}, function(tog) 
+    godmodeenabled = tog 
+end)
 
 --// Category 2: Visuals
 local catVisuals = Window:CreateCategory("Visuals")
-catVisuals:CreateTab("esp team (green)", {enabled = false}, function(tog) showteam = tog end)
-catVisuals:CreateTab("esp enemy (red)", {enabled = false}, function(tog) showenemy = tog end)
-catVisuals:CreateTab("esp names", {enabled = false}, function(tog) espenabled = tog end)
-catVisuals:CreateTab("esp boxes", {enabled = false}, function(tog) boxenabled = tog end)
-catVisuals:CreateTab("esp skeleton", {enabled = false}, function(tog) skeletonenabled = tog end)
-catVisuals:CreateTab("esp tracers", {enabled = false}, function(tog) tracerenabled = tog end)
-catVisuals:CreateTab("distance tags", {enabled = false}, function(tog) showdist = tog end)
+catVisuals:CreateTab("esp team (green)", {enabled = true}, function(tog) showteam = tog end)
+catVisuals:CreateTab("esp enemy (red)", {enabled = true}, function(tog) showenemy = tog end)
+catVisuals:CreateTab("esp names", {enabled = true}, function(tog) espenabled = tog end)
+catVisuals:CreateTab("esp boxes", {enabled = true}, function(tog) boxenabled = tog end)
+catVisuals:CreateTab("esp skeleton", {enabled = true}, function(tog) skeletonenabled = tog end)
+catVisuals:CreateTab("esp tracers", {enabled = true}, function(tog) tracerenabled = tog end)
+catVisuals:CreateTab("distance tags", {enabled = true}, function(tog) showdist = tog end)
+catVisuals:CreateTab("max esp distance", {isMaxDistInput = true})
 
 --// Category 3: Combat (Aimbot & FOV)
 local catCombat = Window:CreateCategory("Combat")
@@ -809,18 +754,18 @@ end)
 RunService.Stepped:Connect(function()
     local char = player.Character
     if char then
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        
         if noclipped then
             for _, part in ipairs(char:GetDescendants()) do
                 if part:IsA("BasePart") then part.CanCollide = false end
             end
         end
         
-        local humanoid = char:FindFirstChildOfClass("Humanoid")
         if humanoid then
             if speedenabled then
                 humanoid.WalkSpeed = customWalkSpeed
-            elseif humanoid.WalkSpeed == customWalkSpeed and not speedenabled then
-                humanoid.WalkSpeed = 16
             end
             
             if godmodeenabled then
@@ -828,9 +773,38 @@ RunService.Stepped:Connect(function()
             end
         end
         
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        if hrp and flyenabled then
-            hrp.Velocity = Vector3.new(hrp.Velocity.X, 1, hrp.Velocity.Z)
+        if hrp then
+            local bv = hrp:FindFirstChild("KyuzxcFlyBodyVelocity")
+            local bg = hrp:FindFirstChild("KyuzxcFlyBodyGyro")
+            
+            if flyenabled then
+                if not bv then
+                    bv = Instance.new("BodyVelocity")
+                    bv.Name = "KyuzxcFlyBodyVelocity"
+                    bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+                    bv.Velocity = Vector3.new(0, 0, 0)
+                    bv.Parent = hrp
+                end
+                if not bg then
+                    bg = Instance.new("BodyGyro")
+                    bg.Name = "KyuzxcFlyBodyGyro"
+                    bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+                    bg.CFrame = Camera.CFrame
+                    bg.Parent = hrp
+                end
+                
+                bg.CFrame = Camera.CFrame
+                local moveDir = Vector3.new(0, 0, 0)
+                if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + Camera.CFrame.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - Camera.CFrame.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - Camera.CFrame.RightVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + Camera.CFrame.RightVector end
+                
+                bv.Velocity = moveDir * 50
+            else
+                if bv then bv:Destroy() end
+                if bg then bg:Destroy() end
+            end
         end
     end
 end)
@@ -869,7 +843,6 @@ local function isPlayerTeammate(p)
     return false
 end
 
---// Aimbot Target Finder Logic
 local function getClosestPlayerInFOV()
     local closestTarget = nil
     local shortestDist = fovradius
@@ -951,6 +924,16 @@ local function updatePlayerESP(p)
         removeESP(p)
         return
     end
+
+    local localChar = player.Character
+    local localHrp = localChar and localChar:FindFirstChild("HumanoidRootPart")
+    if localHrp then
+        local dist = (localHrp.Position - hrp.Position).Magnitude
+        if dist > maxEspDistance then
+            hideESP(espCache[p])
+            return
+        end
+    end
     
     if not espCache[p] then
         espCache[p] = {}
@@ -1007,8 +990,6 @@ local function updatePlayerESP(p)
         cache.Billboard.Enabled = espenabled
         cache.TextLabel.TextColor3 = activeColor
         if espenabled then
-            local localChar = player.Character
-            local localHrp = localChar and localChar:FindFirstChild("HumanoidRootPart")
             local distStr = ""
             if localHrp and showdist then
                 local dist = math.floor((localHrp.Position - hrp.Position).Magnitude)
@@ -1111,7 +1092,7 @@ local function updatePlayerESP(p)
                     skel[boneKey].Visible = false
                 end
 
-                drawBone("Torstate_LHand", leftHandPart)
+                drawBone("Torso_LHand", leftHandPart)
                 drawBone("Torso_RHand", rightHandPart)
                 drawBone("Torso_LFoot", leftFootPart)
                 drawBone("Torso_RFoot", rightFootPart)
