@@ -1,4 +1,4 @@
---// Kyuzxc Simple Mod Menu (iPad Edition + Violet Sidebar Theme & Fully Working Functions)
+--// Kyuzxc Simple Mod Menu (iPad Edition + Resizable, Responsive Violet Sidebar & Fully Working Functions)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -157,7 +157,7 @@ local function teleportToTarget()
     end
 end
 
---// Library Framework (Sidebar Layout Edition)
+--// Library Framework (Resizable & Responsive Sidebar Edition)
 local Library = {
     Windows = {}
 }
@@ -206,8 +206,8 @@ function Library:Load()
     
     for _, win in ipairs(self.Windows) do
         local mainFrame = Instance.new("Frame")
-        mainFrame.Size = UDim2.new(0, 420, 0, 340) -- Mas pinalawak pahiga para sa sidebar
-        mainFrame.Position = UDim2.new(0.5, -210, 0.3, -170)
+        mainFrame.Size = UDim2.new(0, 440, 0, 360)
+        mainFrame.Position = UDim2.new(0.5, -220, 0.3, -180)
         mainFrame.BackgroundColor3 = Color3.fromRGB(17, 14, 27)
         mainFrame.BorderSizePixel = 0
         mainFrame.Active = true
@@ -285,9 +285,9 @@ function Library:Load()
         minCorner.CornerRadius = UDim.new(0, 6)
         minCorner.Parent = minBtn
 
-        --// Sidebar Navigation (Kaliwa)
+        --// Sidebar Navigation (Kaliwa - Responsive Size)
         local sidebar = Instance.new("ScrollingFrame")
-        sidebar.Size = UDim2.new(0, 115, 1, -54)
+        sidebar.Size = UDim2.new(0, 120, 1, -54)
         sidebar.Position = UDim2.new(0, 8, 0, 48)
         sidebar.BackgroundColor3 = Color3.fromRGB(27, 21, 42)
         sidebar.BorderSizePixel = 0
@@ -312,10 +312,10 @@ function Library:Load()
         sidePadding.PaddingRight = UDim.new(0, 6)
         sidePadding.Parent = sidebar
         
-        --// Content Container (Kanan)
+        --// Content Container (Kanan - Responsive)
         local contentContainer = Instance.new("ScrollingFrame")
-        contentContainer.Size = UDim2.new(1, -135, 1, -54)
-        contentContainer.Position = UDim2.new(0, 129, 0, 48)
+        contentContainer.Size = UDim2.new(1, -140, 1, -54)
+        contentContainer.Position = UDim2.new(0, 134, 0, 48)
         contentContainer.BackgroundTransparency = 1
         contentContainer.BorderSizePixel = 0
         contentContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
@@ -328,6 +328,48 @@ function Library:Load()
         contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
         contentLayout.Padding = UDim.new(0, 6)
         contentLayout.Parent = contentContainer
+
+        --// Resize Grip (Pang-resize ng Menu sa Ipad/PC)
+        local resizeGrip = Instance.new("TextButton")
+        resizeGrip.Name = "ResizeGrip"
+        resizeGrip.Size = UDim2.fromOffset(20, 20)
+        resizeGrip.Position = UDim2.new(1, -20, 1, -20)
+        resizeGrip.BackgroundColor3 = accentColor
+        resizeGrip.Text = "↘"
+        resizeGrip.TextColor3 = Color3.fromRGB(255, 255, 255)
+        resizeGrip.Font = Enum.Font.GothamBold
+        resizeGrip.TextSize = 12
+        resizeGrip.BorderSizePixel = 0
+        resizeGrip.ZIndex = 10
+        resizeGrip.Parent = mainFrame
+
+        local gripCorner = Instance.new("UICorner")
+        gripCorner.CornerRadius = UDim.new(0, 6)
+        gripCorner.Parent = resizeGrip
+
+        local resizing, resizeStart, sizeStart = false, nil, nil
+        resizeGrip.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                resizing = true
+                resizeStart = input.Position
+                sizeStart = mainFrame.AbsoluteSize
+                input.Changed:Connect(function()
+                    if input.UserInputState == Enum.UserInputState.End then resizing = false end
+                end)
+            end
+        end)
+
+        UserInputService.InputChanged:Connect(function(input)
+            if resizing and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                local delta = input.Position - resizeStart
+                local minW, minH = 360, 280
+                local maxW, maxH = 700, 600
+                mainFrame.Size = UDim2.fromOffset(
+                    math.clamp(sizeStart.X + delta.X, minW, maxW),
+                    math.clamp(sizeStart.Y + delta.Y, minH, maxH)
+                )
+            end
+        end)
         
         local categoryFrames = {}
         local categoryButtons = {}
@@ -675,14 +717,25 @@ function Library:Load()
             categoryButtons[1].TextColor3 = Color3.fromRGB(245, 240, 255)
         end
         
-        --// Fixed Minimize / Maximize Logic
+        --// Minimize Logic
         local minimized = false
+        local previousSize = mainFrame.Size
         minBtn.MouseButton1Click:Connect(function()
             minimized = not minimized
-            sidebar.Visible = not minimized
-            contentContainer.Visible = not minimized
-            mainFrame.Size = minimized and UDim2.new(0, 420, 0, 42) or UDim2.new(0, 420, 0, 340)
-            minBtn.Text = minimized and "+" or "-"
+            if minimized then
+                previousSize = mainFrame.Size
+                sidebar.Visible = false
+                contentContainer.Visible = false
+                resizeGrip.Visible = false
+                mainFrame.Size = UDim2.new(0, previousSize.X.Offset, 0, 42)
+                minBtn.Text = "+"
+            else
+                mainFrame.Size = previousSize
+                sidebar.Visible = true
+                contentContainer.Visible = true
+                resizeGrip.Visible = true
+                minBtn.Text = "-"
+            end
         end)
     end
 end
