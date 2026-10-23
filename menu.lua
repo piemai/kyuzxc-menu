@@ -33,13 +33,13 @@ local function notify(msg)
 end
 
 --// Feature States
-local showteam = true
-local showenemy = true
-local espenabled = true
-local boxenabled = true
-local skeletonenabled = true
-local tracerenabled = true
-local showdist = true
+local showteam = false
+local showenemy = false
+local espenabled = false
+local boxenabled = false
+local skeletonenabled = false
+local tracerenabled = false
+local showdist = false
 local noclipped = false
 local infjumpenabled = false
 local speedenabled = false
@@ -468,28 +468,34 @@ function Library:Load()
             if aim then aim:Destroy() end
             notify("Menu closed.")
         end)
-        -- Drag only by the header so scrolling and toggle interactions remain reliable.
-        local dragging, dragInput, dragStart, initialPosition = false, nil, nil, nil
+        -- Reliable drag support for mouse and touch; drag from the header area.
+        local dragging, dragStart, initialPosition = false, nil, nil
+        header.Active = true
         header.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 dragging = true
                 dragStart = input.Position
                 initialPosition = main.Position
                 input.Changed:Connect(function()
-                    if input.UserInputState == Enum.UserInputState.End then dragging = false end
+                    if input.UserInputState == Enum.UserInputState.End then
+                        dragging = false
+                    end
                 end)
             end
         end)
-        header.InputChanged:Connect(function(input)
+        UserInputService.InputChanged:Connect(function(input)
+            if not dragging then return end
             if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-                dragInput = input
+                local delta = input.Position - dragStart
+                local viewport = workspace.CurrentCamera.ViewportSize
+                local x = math.clamp(initialPosition.X.Offset + delta.X, -width / 2, viewport.X - width / 2)
+                local y = math.clamp(initialPosition.Y.Offset + delta.Y, 0, viewport.Y - 68)
+                main.Position = UDim2.new(initialPosition.X.Scale, x, initialPosition.Y.Scale, y)
             end
         end)
-        UserInputService.InputChanged:Connect(function(input)
-            if dragging and input == dragInput then
-                local delta = input.Position - dragStart
-                main.Position = UDim2.new(initialPosition.X.Scale, initialPosition.X.Offset + delta.X,
-                    initialPosition.Y.Scale, initialPosition.Y.Offset + delta.Y)
+        UserInputService.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                dragging = false
             end
         end)
         local function resize()
@@ -506,7 +512,7 @@ local Window = Library:CreateWindow("kyuzxc simple mod menu [ipad]")
 
 --// Category 1: Movement
 local catMovement = Window:CreateCategory("Movement")
-catMovement:CreateTab("noclip", {enabled = true}, function(tog) 
+catMovement:CreateTab("noclip", {enabled = false}, function(tog) 
     noclipped = tog 
     if not tog and player.Character then
         for _, part in ipairs(player.Character:GetDescendants()) do
@@ -514,7 +520,7 @@ catMovement:CreateTab("noclip", {enabled = true}, function(tog)
         end
     end
 end)
-catMovement:CreateTab("inf jump", {enabled = true}, function(tog) infjumpenabled = tog end) 
+catMovement:CreateTab("inf jump", {enabled = false}, function(tog) infjumpenabled = tog end) 
 catMovement:CreateTab("speed hack", {enabled = false}, function(tog) 
     speedenabled = tog 
     if not tog and player.Character then
@@ -528,13 +534,13 @@ catMovement:CreateTab("god mode", {enabled = false}, function(tog) godmodeenable
 
 --// Category 2: Visuals
 local catVisuals = Window:CreateCategory("Visuals")
-catVisuals:CreateTab("esp team (green)", {enabled = true}, function(tog) showteam = tog end)
-catVisuals:CreateTab("esp enemy (red)", {enabled = true}, function(tog) showenemy = tog end)
-catVisuals:CreateTab("esp names", {enabled = true}, function(tog) espenabled = tog end)
-catVisuals:CreateTab("esp boxes", {enabled = true}, function(tog) boxenabled = tog end)
-catVisuals:CreateTab("esp skeleton", {enabled = true}, function(tog) skeletonenabled = tog end)
-catVisuals:CreateTab("esp tracers", {enabled = true}, function(tog) tracerenabled = tog end)
-catVisuals:CreateTab("distance tags", {enabled = true}, function(tog) showdist = tog end)
+catVisuals:CreateTab("esp team (green)", {enabled = false}, function(tog) showteam = tog end)
+catVisuals:CreateTab("esp enemy (red)", {enabled = false}, function(tog) showenemy = tog end)
+catVisuals:CreateTab("esp names", {enabled = false}, function(tog) espenabled = tog end)
+catVisuals:CreateTab("esp boxes", {enabled = false}, function(tog) boxenabled = tog end)
+catVisuals:CreateTab("esp skeleton", {enabled = false}, function(tog) skeletonenabled = tog end)
+catVisuals:CreateTab("esp tracers", {enabled = false}, function(tog) tracerenabled = tog end)
+catVisuals:CreateTab("distance tags", {enabled = false}, function(tog) showdist = tog end)
 
 --// Category 3: Combat (Aimbot & FOV)
 local catCombat = Window:CreateCategory("Combat")
