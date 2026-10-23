@@ -1,4 +1,4 @@
---// Kyuzxc Simple Mod Menu (iPad Edition + Fully Fixed Inf Jump & Speed Hack)
+--// Kyuzxc Simple Mod Menu (iPad Edition + Fixed Inf Jump, Speed Hack & Draggable Aim Button)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -59,7 +59,7 @@ local teamColor = Color3.fromRGB(0, 255, 120)  -- Green (Team)
 local enemyColor = Color3.fromRGB(255, 75, 75) -- Red (Enemy)
 local accentColor = Color3.fromRGB(0, 255, 128)
 
---// Floating Draggable Mobile Aimbot Toggle Button
+--// Floating Draggable Mobile Aimbot Toggle Button (Center Default)
 local mobileGui = Instance.new("ScreenGui")
 mobileGui.Name = "KyuzxcMobileAimBtn"
 mobileGui.ResetOnSpawn = false
@@ -1060,7 +1060,6 @@ local function updatePlayerESP(p)
                             skel[boneKey].Size = UDim2.new(0, dist, 0, 1.5)
                             skel[boneKey].Position = UDim2.new(0, (p1.X + p2.X) / 2, 0, (p1.Y + p2.Y) / 2)
                             skel[boneKey].Rotation = math.deg(math.atan2(p2.Y - p1.Y, p2.X - p1.X))
-                            skel[boneKey].Speed = true
                             skel[boneKey].Visible = true
                             return
                         end
