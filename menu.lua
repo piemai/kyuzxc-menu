@@ -1,4 +1,4 @@
---// Kyuzxc Simple Mod Menu (iPad Edition + Advanced Hooking for Ammo & Reload)
+--// Kyuzxc Simple Mod Menu (iPad Edition + FOV Adjuster & Infinite Stamina)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -46,8 +46,9 @@ local infjumpenabled = false
 local speedenabled = false
 local customWalkSpeed = 50
 local flyenabled = false
-local unlimitammoenabled = false
-local fastreloadenabled = false
+local fovadjustenabled = false
+local customCameraFOV = 90
+local infstaminaenabled = false
 local fovcircleenabled = false
 local fovradius = 120
 local aimbotenabled = false
@@ -185,6 +186,7 @@ function Library:CreateWindow(title)
                 IsSpeedInput = config and config.isSpeedInput or false,
                 IsFovInput = config and config.isFovInput or false,
                 IsMaxDistInput = config and config.isMaxDistInput or false,
+                IsCamFovInput = config and config.isCamFovInput or false,
                 IsPartDropdown = config and config.isPartDropdown or false,
                 IsSmoothDropdown = config and config.isSmoothDropdown or false
             })
@@ -410,15 +412,17 @@ function Library:Load()
                     togButton.BackgroundColor3 = Color3.fromRGB(0, 130, 220)
                     togButton.TextColor3 = Color3.fromRGB(255, 255, 255)
                     togButton.Text = tab.Name
-                elseif tab.IsSpeedInput or tab.IsFovInput or tab.IsMaxDistInput then
+                elseif tab.IsSpeedInput or tab.IsFovInput or tab.IsMaxDistInput or tab.IsCamFovInput then
                     togButton.BackgroundColor3 = Color3.fromRGB(38, 29, 57)
                     togButton.TextColor3 = Color3.fromRGB(200, 200, 200)
                     if tab.IsSpeedInput then
                         togButton.Text = "  Speed Value:"
                     elseif tab.IsFovInput then
-                        togButton.Text = "  FOV Radius:"
-                    else
+                        togButton.Text = "  Aim FOV Radius:"
+                    elseif tab.IsMaxDistInput then
                         togButton.Text = "  Max ESP Dist:"
+                    elseif tab.IsCamFovInput then
+                        togButton.Text = "  Camera FOV:"
                     end
                     togButton.TextXAlignment = Enum.TextXAlignment.Left
                     
@@ -431,8 +435,10 @@ function Library:Load()
                         textBox.Text = tostring(customWalkSpeed)
                     elseif tab.IsFovInput then
                         textBox.Text = tostring(fovradius)
-                    else
+                    elseif tab.IsMaxDistInput then
                         textBox.Text = tostring(maxEspDistance)
+                    elseif tab.IsCamFovInput then
+                        textBox.Text = tostring(customCameraFOV)
                     end
                     textBox.Font = Enum.Font.GothamBold
                     textBox.TextSize = 11
@@ -450,10 +456,13 @@ function Library:Load()
                                 notify("WalkSpeed set to: " .. num)
                             elseif tab.IsFovInput then
                                 fovradius = num
-                                notify("FOV Radius set to: " .. num)
-                            else
+                                notify("Aim FOV set to: " .. num)
+                            elseif tab.IsMaxDistInput then
                                 maxEspDistance = num
-                                notify("Max ESP Distance set to: " .. num)
+                                notify("Max ESP Dist set to: " .. num)
+                            elseif tab.IsCamFovInput then
+                                customCameraFOV = math.clamp(num, 10, 120)
+                                notify("Camera FOV set to: " .. customCameraFOV)
                             end
                             textBox.Text = tostring(num)
                         else
@@ -461,8 +470,10 @@ function Library:Load()
                                 textBox.Text = tostring(customWalkSpeed)
                             elseif tab.IsFovInput then
                                 textBox.Text = tostring(fovradius)
-                            else
+                            elseif tab.IsMaxDistInput then
                                 textBox.Text = tostring(maxEspDistance)
+                            elseif tab.IsCamFovInput then
+                                textBox.Text = tostring(customCameraFOV)
                             end
                         end
                     end)
@@ -665,13 +676,13 @@ function Library:Load()
                     togButton.TextXAlignment = Enum.TextXAlignment.Left
                 end
                 
-                if not tab.IsSpeedInput and not tab.IsFovInput and not tab.IsMaxDistInput and not tab.IsScrollingDropdown and not tab.IsPartDropdown and not tab.IsSmoothDropdown and not tab.IsButton then
+                if not tab.IsSpeedInput and not tab.IsFovInput and not tab.IsMaxDistInput and not tab.IsCamFovInput and not tab.IsScrollingDropdown and not tab.IsPartDropdown and not tab.IsSmoothDropdown and not tab.IsButton then
                     local pad = Instance.new("UIPadding")
                     pad.PaddingLeft = UDim.new(0, 6)
                     pad.Parent = togButton
                 end
 
-                if not tab.IsSpeedInput and not tab.IsFovInput and not tab.IsMaxDistInput then
+                if not tab.IsSpeedInput and not tab.IsFovInput and not tab.IsMaxDistInput and not tab.IsCamFovInput then
                     togButton.Font = Enum.Font.GothamBold
                     togButton.TextSize = 11
                 end
@@ -682,7 +693,7 @@ function Library:Load()
                 corner.Parent = togButton
                 
                 local currentState = tab.State
-                if not tab.IsButton and not tab.IsScrollingDropdown and not tab.IsPartDropdown and not tab.IsSmoothDropdown and not tab.IsSpeedInput and not tab.IsFovInput and not tab.IsMaxDistInput then
+                if not tab.IsButton and not tab.IsScrollingDropdown and not tab.IsPartDropdown and not tab.IsSmoothDropdown and not tab.IsSpeedInput and not tab.IsFovInput and not tab.IsMaxDistInput and not tab.IsCamFovInput then
                     togButton.MouseButton1Click:Connect(function()
                         currentState = not currentState
                         togButton.Text = "  " .. tab.Name .. " : " .. (currentState and "ON" or "OFF")
@@ -767,11 +778,8 @@ catMovement:CreateTab("speed value", {isSpeedInput = true})
 catMovement:CreateTab("fly", {enabled = false}, function(tog) 
     flyenabled = tog 
 end)
-catMovement:CreateTab("unlimited ammo", {enabled = false}, function(tog) 
-    unlimitammoenabled = tog 
-end)
-catMovement:CreateTab("fast reload", {enabled = false}, function(tog) 
-    fastreloadenabled = tog 
+catMovement:CreateTab("infinite stamina", {enabled = false}, function(tog) 
+    infstaminaenabled = tog 
 end)
 
 --// Category 2: Visuals
@@ -785,7 +793,7 @@ catVisuals:CreateTab("esp tracers", {enabled = true}, function(tog) tracerenable
 catVisuals:CreateTab("distance tags", {enabled = true}, function(tog) showdist = tog end)
 catVisuals:CreateTab("max esp distance", {isMaxDistInput = true})
 
---// Category 3: Combat (Aimbot & FOV)
+--// Category 3: Combat (Aimbot, FOV & Camera)
 local catCombat = Window:CreateCategory("Combat")
 catCombat:CreateTab("aimbot button", {enabled = false}, function(tog) 
     aimbotenabled = tog 
@@ -800,8 +808,10 @@ catCombat:CreateTab("aimbot button", {enabled = false}, function(tog)
 end)
 catCombat:CreateTab("aim part", {isPartDropdown = true})
 catCombat:CreateTab("aim smoothness", {isSmoothDropdown = true})
-catCombat:CreateTab("fov circle", {enabled = false}, function(tog) fovcircleenabled = tog end)
-catCombat:CreateTab("fov value", {isFovInput = true})
+catCombat:CreateTab("aim fov circle", {enabled = false}, function(tog) fovcircleenabled = tog end)
+catCombat:CreateTab("aim fov value", {isFovInput = true})
+catCombat:CreateTab("camera fov", {enabled = false}, function(tog) fovadjustenabled = tog end)
+catCombat:CreateTab("camera fov value", {isCamFovInput = true})
 
 --// Category 4: Teleport
 local catTeleport = Window:CreateCategory("Teleport")
@@ -830,7 +840,7 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
---// Advanced Gun Hooking Loop for Arsenal / FPS Games
+--// Main Render / Stepped Hook Loop (Movement, FOV Adjuster & Infinite Stamina)
 RunService.Stepped:Connect(function()
     local char = player.Character
     if char then
@@ -849,27 +859,19 @@ RunService.Stepped:Connect(function()
             end
         end
         
-        -- Advanced Gun Scan (Player Backpack + Character Tools + PlayerGui/Viewmodel hooks)
-        pcall(function()
-            local backpack = player:FindFirstChildOfClass("Backpack")
-            local containers = {char, backpack}
-            
-            for _, container in ipairs(containers) do
-                if container then
-                    for _, obj in ipairs(container:GetDescendants()) do
-                        if obj:IsA("NumberValue") or obj:IsA("IntValue") then
-                            local n = string.lower(obj.Name)
-                            if unlimitammoenabled and (string.find(n, "ammo") or string.find(n, "clip") or string.find(n, "mag") or string.find(n, "bullets")) then
-                                obj.Value = 999
-                            end
-                            if fastreloadenabled and (string.find(n, "reload") or string.find(n, "cooldown") or string.find(n, "firerate") or string.find(n, "delay")) then
-                                obj.Value = 0.01
-                            end
+        -- Infinite Stamina Hook (Scans and freezes stamina/energy values inside character)
+        if infstaminaenabled then
+            pcall(function()
+                for _, obj in ipairs(char:GetDescendants()) do
+                    if obj:IsA("NumberValue") or obj:IsA("IntValue") then
+                        local n = string.lower(obj.Name)
+                        if string.find(n, "stamina") or string.find(n, "energy") or string.find(n, "fatigue") or string.find(n, "sprint") then
+                            obj.Value = 100
                         end
                     end
                 end
-            end
-        end)
+            end)
+        end
         
         if hrp then
             local bv = hrp:FindFirstChild("KyuzxcFlyBodyVelocity")
@@ -907,7 +909,7 @@ RunService.Stepped:Connect(function()
     end
 end)
 
---// Visuals: Round FOV Circle & Mobile Aimbot & ESP Drawing
+--// Visuals: Camera FOV Adjuster, Round FOV Circle, Mobile Aimbot & ESP Drawing
 local visualGui = Instance.new("ScreenGui")
 visualGui.Name = "KyuzxcVisualsGui"
 visualGui.ResetOnSpawn = false
@@ -1197,7 +1199,7 @@ local function updatePlayerESP(p)
                     skel[boneKey].Visible = false
                 end
 
-                drawBone("Torso_LHand", leftHandFile or leftHandPart)
+                drawBone("Torso_LHand", leftHandPart)
                 drawBone("Torso_RHand", rightHandPart)
                 drawBone("Torso_LFoot", leftFootPart)
                 drawBone("Torso_RFoot", rightFootPart)
@@ -1211,6 +1213,11 @@ local function updatePlayerESP(p)
 end
 
 RunService.RenderStepped:Connect(function()
+    -- Camera FOV Adjuster Loop
+    if fovadjustenabled then
+        Camera.FieldOfView = customCameraFOV
+    end
+
     fovCircle.Visible = fovcircleenabled
     if fovcircleenabled then
         fovCircle.Size = UDim2.new(0, fovradius * 2, 0, fovradius * 2)
