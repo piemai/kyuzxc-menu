@@ -2,6 +2,7 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local Lighting = game:GetService("Lighting")
 local CoreGui = game:GetService("CoreGui")
 local StarterGui = game:GetService("StarterGui")
 local Camera = workspace.CurrentCamera
@@ -55,9 +56,33 @@ local targetPartOption = "Head"
 local aimbotSmoothing = 0.3
 local selectedTargetPlayer = nil
 
+--// NEW: POV, Camera & Extra Visual States
+local povenabled = false
+local cameraFovValue = 90
+local povOffsetX = 0
+local povOffsetY = 0
+local povOffsetZ = 0
+local unlockZoomEnabled = false
+local customMaxZoom = 500
+local shiftlockEnabled = false
+local spectateEnabled = false
+local fullbrightEnabled = false
+local crosshairEnabled = false
+
+-- Backup Default Lighting & Camera Values
+local defaultLighting = {
+    Brightness = Lighting.Brightness,
+    ClockTime = Lighting.ClockTime,
+    FogEnd = Lighting.FogEnd,
+    GlobalShadows = Lighting.GlobalShadows,
+    Ambient = Lighting.Ambient
+}
+local defaultMaxZoom = player.CameraMaxZoomDistance
+local sliderResetCallbacks = {}
+
 --// ESP Colors & Violet Theme
-local teamColor = Color3.fromRGB(0, 255, 120)  -- Green (Team)
-local enemyColor = Color3.fromRGB(255, 75, 75) -- Red (Enemy)
+local teamColor = Color3.fromRGB(0, 255, 120)   -- Green (Team)
+local enemyColor = Color3.fromRGB(255, 75, 75)  -- Red (Enemy)
 local accentColor = Color3.fromRGB(165, 95, 255) -- Violet Accent
 
 --// Floating Draggable Mobile Aimbot Toggle Button
@@ -157,6 +182,21 @@ local function teleportToTarget()
     end
 end
 
+--// FPS Booster Helper
+local function applyFpsBoost()
+    Lighting.GlobalShadows = false
+    Lighting.FogEnd = 9e9
+    for _, v in ipairs(workspace:GetDescendants()) do
+        if v:IsA("BasePart") and not v.Parent:FindFirstChildOfClass("Humanoid") then
+            v.Material = Enum.Material.SmoothPlastic
+            v.Reflectance = 0
+        elseif v:IsA("ParticleEmitter") or v:IsA("Trail") then
+            v.Enabled = false
+        end
+    end
+    notify("FPS Boost applied! Shadows & particles reduced.")
+end
+
 --// Library Framework (Resizable & Responsive Sidebar Edition)
 local Library = {
     Windows = {}
@@ -185,7 +225,13 @@ function Library:CreateWindow(title)
                 IsFovInput = config and config.isFovInput or false,
                 IsMaxDistInput = config and config.isMaxDistInput or false,
                 IsPartDropdown = config and config.isPartDropdown or false,
-                IsSmoothDropdown = config and config.isSmoothDropdown or false
+                IsSmoothDropdown = config and config.isSmoothDropdown or false,
+                IsSlider = config and config.isSlider or false,
+                Min = config and config.min or 0,
+                Max = config and config.max or 100,
+                Default = config and config.default or 50,
+                Step = config and config.step or 1,
+                ResetGroup = config and config.resetGroup or nil
             })
         end
         
@@ -329,7 +375,7 @@ function Library:Load()
         contentLayout.Padding = UDim.new(0, 6)
         contentLayout.Parent = contentContainer
 
-        --// Resize Grip (Pang-resize ng Menu sa Ipad/PC)
+        --// Resize Grip (Pang-resize ng Menu sa iPad/PC)
         local resizeGrip = Instance.new("TextButton")
         resizeGrip.Name = "ResizeGrip"
         resizeGrip.Size = UDim2.fromOffset(20, 20)
@@ -401,298 +447,413 @@ function Library:Load()
             itemLayout.Parent = itemHolder
             
             for idx, tab in ipairs(cat.Tabs) do
-                local togButton = Instance.new("TextButton")
-                togButton.LayoutOrder = idx * 2
-                togButton.Size = UDim2.new(1, 0, 0, 34)
-                
-                if tab.IsButton then
-                    togButton.BackgroundColor3 = Color3.fromRGB(0, 130, 220)
-                    togButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-                    togButton.Text = tab.Name
-                elseif tab.IsSpeedInput or tab.IsFovInput or tab.IsMaxDistInput then
-                    togButton.BackgroundColor3 = Color3.fromRGB(38, 29, 57)
-                    togButton.TextColor3 = Color3.fromRGB(200, 200, 200)
-                    if tab.IsSpeedInput then
-                        togButton.Text = "  Speed Value:"
-                    elseif tab.IsFovInput then
-                        togButton.Text = "  FOV Radius:"
-                    else
-                        togButton.Text = "  Max ESP Dist:"
+                if tab.IsSlider then
+                    local sliderContainer = Instance.new("Frame")
+                    sliderContainer.LayoutOrder = idx * 2
+                    sliderContainer.Size = UDim2.new(1, 0, 0, 50)
+                    sliderContainer.BackgroundColor3 = Color3.fromRGB(38, 29, 57)
+                    sliderContainer.BorderSizePixel = 0
+                    sliderContainer.Parent = itemHolder
+
+                    local sCorner = Instance.new("UICorner")
+                    sCorner.CornerRadius = UDim.new(0, 6)
+                    sCorner.Parent = sliderContainer
+
+                    local sLabel = Instance.new("TextLabel")
+                    sLabel.Size = UDim2.new(1, -80, 0, 22)
+                    sLabel.Position = UDim2.new(0, 10, 0, 4)
+                    sLabel.BackgroundTransparency = 1
+                    sLabel.TextColor3 = Color3.fromRGB(220, 210, 240)
+                    sLabel.Font = Enum.Font.GothamBold
+                    sLabel.TextSize = 11
+                    sLabel.TextXAlignment = Enum.TextXAlignment.Left
+                    sLabel.Text = tab.Name
+                    sLabel.Parent = sliderContainer
+
+                    local valBox = Instance.new("TextBox")
+                    valBox.Size = UDim2.new(0, 58, 0, 20)
+                    valBox.Position = UDim2.new(1, -66, 0, 5)
+                    valBox.BackgroundColor3 = Color3.fromRGB(17, 14, 27)
+                    valBox.TextColor3 = accentColor
+                    valBox.Font = Enum.Font.GothamBold
+                    valBox.TextSize = 11
+                    valBox.Text = tostring(tab.Default)
+                    valBox.Parent = sliderContainer
+
+                    local vCorner = Instance.new("UICorner")
+                    vCorner.CornerRadius = UDim.new(0, 4)
+                    vCorner.Parent = valBox
+
+                    local track = Instance.new("Frame")
+                    track.Size = UDim2.new(1, -20, 0, 8)
+                    track.Position = UDim2.new(0, 10, 0, 32)
+                    track.BackgroundColor3 = Color3.fromRGB(22, 17, 34)
+                    track.BorderSizePixel = 0
+                    track.Parent = sliderContainer
+
+                    local tCorner = Instance.new("UICorner")
+                    tCorner.CornerRadius = UDim.new(1, 0)
+                    tCorner.Parent = track
+
+                    local fill = Instance.new("Frame")
+                    local initAlpha = math.clamp((tab.Default - tab.Min) / (tab.Max - tab.Min), 0, 1)
+                    fill.Size = UDim2.new(initAlpha, 0, 1, 0)
+                    fill.BackgroundColor3 = accentColor
+                    fill.BorderSizePixel = 0
+                    fill.Parent = track
+
+                    local fCorner = Instance.new("UICorner")
+                    fCorner.CornerRadius = UDim.new(1, 0)
+                    fCorner.Parent = fill
+
+                    local currentVal = tab.Default
+                    local function setSliderValue(val)
+                        local snapped = math.floor((val / tab.Step) + 0.5) * tab.Step
+                        -- Clean floating point precision
+                        snapped = tonumber(string.format("%.2f", math.clamp(snapped, tab.Min, tab.Max)))
+                        currentVal = snapped
+                        local alpha = math.clamp((snapped - tab.Min) / (tab.Max - tab.Min), 0, 1)
+                        fill.Size = UDim2.new(alpha, 0, 1, 0)
+                        valBox.Text = tostring(snapped)
+                        if tab.Callback then
+                            tab.Callback(snapped)
+                        end
                     end
-                    togButton.TextXAlignment = Enum.TextXAlignment.Left
-                    
-                    local textBox = Instance.new("TextBox")
-                    textBox.Size = UDim2.new(0, 75, 0, 24)
-                    textBox.Position = UDim2.new(1, -80, 0.5, -12)
-                    textBox.BackgroundColor3 = Color3.fromRGB(17, 14, 27)
-                    textBox.TextColor3 = accentColor
-                    if tab.IsSpeedInput then
-                        textBox.Text = tostring(customWalkSpeed)
-                    elseif tab.IsFovInput then
-                        textBox.Text = tostring(fovradius)
-                    else
-                        textBox.Text = tostring(maxEspDistance)
+
+                    if tab.ResetGroup == "POV" then
+                        table.insert(sliderResetCallbacks, function()
+                            setSliderValue(tab.Default)
+                        end)
                     end
-                    textBox.Font = Enum.Font.GothamBold
-                    textBox.TextSize = 11
-                    textBox.Parent = togButton
-                    
-                    local boxCorner = Instance.new("UICorner")
-                    boxCorner.CornerRadius = UDim.new(0, 4)
-                    boxCorner.Parent = textBox
-                    
-                    textBox.FocusLost:Connect(function()
-                        local num = tonumber(textBox.Text)
+
+                    local sliding = false
+                    local function updateFromInput(input)
+                        local relX = math.clamp((input.Position.X - track.AbsolutePosition.X) / track.AbsoluteSize.X, 0, 1)
+                        local rawVal = tab.Min + (tab.Max - tab.Min) * relX
+                        setSliderValue(rawVal)
+                    end
+
+                    track.InputBegan:Connect(function(input)
+                        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                            sliding = true
+                            updateFromInput(input)
+                        end
+                    end)
+
+                    UserInputService.InputChanged:Connect(function(input)
+                        if sliding and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                            updateFromInput(input)
+                        end
+                    end)
+
+                    UserInputService.InputEnded:Connect(function(input)
+                        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                            sliding = false
+                        end
+                    end)
+
+                    valBox.FocusLost:Connect(function()
+                        local num = tonumber(valBox.Text)
                         if num then
-                            if tab.IsSpeedInput then
-                                customWalkSpeed = num
-                                notify("WalkSpeed set to: " .. num)
-                            elseif tab.IsFovInput then
-                                fovradius = num
-                                notify("FOV Radius set to: " .. num)
-                            else
-                                maxEspDistance = num
-                                notify("Max ESP Distance set to: " .. num)
-                            end
-                            textBox.Text = tostring(num)
+                            setSliderValue(num)
                         else
-                            if tab.IsSpeedInput then
-                                textBox.Text = tostring(customWalkSpeed)
-                            elseif tab.IsFovInput then
-                                textBox.Text = tostring(fovradius)
-                            else
-                                textBox.Text = tostring(maxEspDistance)
-                            end
-                        end
-                    end)
-                elseif tab.IsPartDropdown then
-                    togButton.BackgroundColor3 = Color3.fromRGB(90, 40, 150)
-                    togButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-                    togButton.Text = "Aim Part: " .. targetPartOption .. " ▼"
-                    
-                    local partFrame = Instance.new("Frame")
-                    partFrame.LayoutOrder = (idx * 2) + 1
-                    partFrame.Size = UDim2.new(1, 0, 0, 96)
-                    partFrame.BackgroundColor3 = Color3.fromRGB(27, 21, 42)
-                    partFrame.BorderSizePixel = 0
-                    partFrame.Visible = false
-                    partFrame.Parent = itemHolder
-                    
-                    local partCorner = Instance.new("UICorner")
-                    partCorner.CornerRadius = UDim.new(0, 6)
-                    partCorner.Parent = partFrame
-
-                    local partLayout = Instance.new("UIListLayout")
-                    partLayout.SortOrder = Enum.SortOrder.LayoutOrder
-                    partLayout.Padding = UDim.new(0, 4)
-                    partLayout.Parent = partFrame
-
-                    local parts = {"Head", "UpperTorso", "HumanoidRootPart"}
-                    for _, ptName in ipairs(parts) do
-                        local pBtn = Instance.new("TextButton")
-                        pBtn.Size = UDim2.new(1, 0, 0, 28)
-                        pBtn.BackgroundColor3 = (targetPartOption == ptName) and Color3.fromRGB(93, 205, 151) or Color3.fromRGB(38, 29, 57)
-                        pBtn.TextColor3 = Color3.fromRGB(235, 235, 235)
-                        pBtn.Text = "Target: " .. ptName
-                        pBtn.Font = Enum.Font.GothamBold
-                        pBtn.TextSize = 11
-                        pBtn.Parent = partFrame
-                        
-                        local pCorner = Instance.new("UICorner")
-                        pCorner.CornerRadius = UDim.new(0, 4)
-                        pCorner.Parent = pBtn
-                        
-                        pBtn.MouseButton1Click:Connect(function()
-                            targetPartOption = ptName
-                            togButton.Text = "Aim Part: " .. ptName .. " ▼"
-                            notify("Aimbot Part set to: " .. ptName)
-                            partFrame.Visible = false
-                        end)
-                    end
-
-                    togButton.MouseButton1Click:Connect(function()
-                        partFrame.Visible = not partFrame.Visible
-                    end)
-                elseif tab.IsSmoothDropdown then
-                    togButton.BackgroundColor3 = Color3.fromRGB(110, 50, 180)
-                    togButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-                    togButton.Text = "Aim Mode: Medium ▼"
-                    
-                    local smoothFrame = Instance.new("Frame")
-                    smoothFrame.LayoutOrder = (idx * 2) + 1
-                    smoothFrame.Size = UDim2.new(1, 0, 0, 128)
-                    smoothFrame.BackgroundColor3 = Color3.fromRGB(27, 21, 42)
-                    smoothFrame.BorderSizePixel = 0
-                    smoothFrame.Visible = false
-                    smoothFrame.Parent = itemHolder
-                    
-                    local smoothCorner = Instance.new("UICorner")
-                    smoothCorner.CornerRadius = UDim.new(0, 6)
-                    smoothCorner.Parent = smoothFrame
-
-                    local smoothLayout = Instance.new("UIListLayout")
-                    smoothLayout.SortOrder = Enum.SortOrder.LayoutOrder
-                    smoothLayout.Padding = UDim.new(0, 4)
-                    smoothLayout.Parent = smoothFrame
-
-                    local modes = {
-                        {Name = "Hard (Instant)", Val = 0},
-                        {Name = "Medium (Balanced)", Val = 0.3},
-                        {Name = "Low (Smooth)", Val = 0.6}
-                    }
-                    for _, mode in ipairs(modes) do
-                        local mBtn = Instance.new("TextButton")
-                        mBtn.Size = UDim2.new(1, 0, 0, 28)
-                        mBtn.BackgroundColor3 = (aimbotSmoothing == mode.Val) and Color3.fromRGB(93, 205, 151) or Color3.fromRGB(38, 29, 57)
-                        mBtn.TextColor3 = Color3.fromRGB(235, 235, 235)
-                        mBtn.Text = mode.Name
-                        mBtn.Font = Enum.Font.GothamBold
-                        mBtn.TextSize = 11
-                        mBtn.Parent = smoothFrame
-                        
-                        local mCorner = Instance.new("UICorner")
-                        mCorner.CornerRadius = UDim.new(0, 4)
-                        mCorner.Parent = mBtn
-                        
-                        mBtn.MouseButton1Click:Connect(function()
-                            aimbotSmoothing = mode.Val
-                            togButton.Text = "Aim Mode: " .. mode.Name .. " ▼"
-                            notify("Aimbot Mode: " .. mode.Name)
-                            smoothFrame.Visible = false
-                        end)
-                    end
-
-                    togButton.MouseButton1Click:Connect(function()
-                        smoothFrame.Visible = not smoothFrame.Visible
-                    end)
-                elseif tab.IsScrollingDropdown then
-                    togButton.BackgroundColor3 = Color3.fromRGB(80, 40, 160)
-                    togButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-                    togButton.Text = "Target: [Select Player] ▼"
-                    
-                    local dropFrame = Instance.new("ScrollingFrame")
-                    dropFrame.LayoutOrder = (idx * 2) + 1
-                    dropFrame.Size = UDim2.new(1, 0, 0, 180)
-                    dropFrame.BackgroundColor3 = Color3.fromRGB(27, 21, 42)
-                    dropFrame.BorderSizePixel = 0
-                    dropFrame.Visible = true
-                    dropFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-                    dropFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
-                    dropFrame.ScrollBarThickness = 3
-                    dropFrame.ScrollBarImageColor3 = accentColor
-                    dropFrame.Parent = itemHolder
-                    
-                    local dropCorner = Instance.new("UICorner")
-                    dropCorner.CornerRadius = UDim.new(0, 6)
-                    dropCorner.Parent = dropFrame
-
-                    local dropLayout = Instance.new("UIListLayout")
-                    dropLayout.SortOrder = Enum.SortOrder.LayoutOrder
-                    dropLayout.Padding = UDim.new(0, 4)
-                    dropLayout.Parent = dropFrame
-                    
-                    local function refreshPlayerList()
-                        for _, child in ipairs(dropFrame:GetChildren()) do
-                            if child:IsA("TextButton") then
-                                child:Destroy()
-                            end
-                        end
-                        
-                        local refreshBtn = Instance.new("TextButton")
-                        refreshBtn.Size = UDim2.new(1, 0, 0, 28)
-                        refreshBtn.BackgroundColor3 = Color3.fromRGB(0, 110, 180)
-                        refreshBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-                        refreshBtn.Text = "↻ Refresh Player List"
-                        refreshBtn.Font = Enum.Font.GothamBold
-                        refreshBtn.TextSize = 11
-                        refreshBtn.Parent = dropFrame
-                        
-                        local refCorner = Instance.new("UICorner")
-                        refCorner.CornerRadius = UDim.new(0, 4)
-                        refCorner.Parent = refreshBtn
-                        
-                        refreshBtn.MouseButton1Click:Connect(function()
-                            refreshPlayerList()
-                            notify("Player list refreshed!")
-                        end)
-                        
-                        for _, p in ipairs(Players:GetPlayers()) do
-                            if p ~= player then
-                                local pBtn = Instance.new("TextButton")
-                                pBtn.Size = UDim2.new(1, 0, 0, 28)
-                                pBtn.BackgroundColor3 = (selectedTargetPlayer == p) and Color3.fromRGB(93, 205, 151) or Color3.fromRGB(38, 29, 57)
-                                pBtn.TextColor3 = Color3.fromRGB(235, 235, 235)
-                                pBtn.Text = p.DisplayName .. " (@" .. p.Name .. ")"
-                                pBtn.Font = Enum.Font.GothamBold
-                                pBtn.TextSize = 11
-                                pBtn.Parent = dropFrame
-                                
-                                local pCorner = Instance.new("UICorner")
-                                pCorner.CornerRadius = UDim.new(0, 4)
-                                pCorner.Parent = pBtn
-                                
-                                pBtn.MouseButton1Click:Connect(function()
-                                    selectedTargetPlayer = p
-                                    togButton.Text = "Target: " .. p.Name .. " ▼"
-                                    refreshPlayerList()
-                                    notify("Target selected: " .. p.Name)
-                                end)
-                            end
-                        end
-                    end
-                    
-                    refreshPlayerList()
-                    Players.PlayerAdded:Connect(refreshPlayerList)
-                    Players.PlayerRemoving:Connect(function(leavingPlayer)
-                        if selectedTargetPlayer == leavingPlayer then
-                            selectedTargetPlayer = nil
-                            togButton.Text = "Target: [Select Player] ▼"
-                        end
-                        refreshPlayerList()
-                    end)
-                    
-                    togButton.MouseButton1Click:Connect(function()
-                        dropFrame.Visible = not dropFrame.Visible
-                        if dropFrame.Visible then
-                            refreshPlayerList()
+                            valBox.Text = tostring(currentVal)
                         end
                     end)
                 else
-                    togButton.BackgroundColor3 = tab.State and Color3.fromRGB(93, 205, 151) or Color3.fromRGB(38, 29, 57)
-                    togButton.TextColor3 = tab.State and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(180, 180, 190)
-                    togButton.Text = "  " .. tab.Name .. " : " .. (tab.State and "ON" or "OFF")
-                    togButton.TextXAlignment = Enum.TextXAlignment.Left
-                end
-                
-                if not tab.IsSpeedInput and not tab.IsFovInput and not tab.IsMaxDistInput and not tab.IsScrollingDropdown and not tab.IsPartDropdown and not tab.IsSmoothDropdown and not tab.IsButton then
-                    local pad = Instance.new("UIPadding")
-                    pad.PaddingLeft = UDim.new(0, 6)
-                    pad.Parent = togButton
-                end
+                    local togButton = Instance.new("TextButton")
+                    togButton.LayoutOrder = idx * 2
+                    togButton.Size = UDim2.new(1, 0, 0, 34)
+                    
+                    if tab.IsButton then
+                        togButton.BackgroundColor3 = Color3.fromRGB(0, 130, 220)
+                        togButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+                        togButton.Text = tab.Name
+                    elseif tab.IsSpeedInput or tab.IsFovInput or tab.IsMaxDistInput then
+                        togButton.BackgroundColor3 = Color3.fromRGB(38, 29, 57)
+                        togButton.TextColor3 = Color3.fromRGB(200, 200, 200)
+                        if tab.IsSpeedInput then
+                            togButton.Text = "  Speed Value:"
+                        elseif tab.IsFovInput then
+                            togButton.Text = "  FOV Radius:"
+                        else
+                            togButton.Text = "  Max ESP Dist:"
+                        end
+                        togButton.TextXAlignment = Enum.TextXAlignment.Left
+                        
+                        local textBox = Instance.new("TextBox")
+                        textBox.Size = UDim2.new(0, 75, 0, 24)
+                        textBox.Position = UDim2.new(1, -80, 0.5, -12)
+                        textBox.BackgroundColor3 = Color3.fromRGB(17, 14, 27)
+                        textBox.TextColor3 = accentColor
+                        if tab.IsSpeedInput then
+                            textBox.Text = tostring(customWalkSpeed)
+                        elseif tab.IsFovInput then
+                            textBox.Text = tostring(fovradius)
+                        else
+                            textBox.Text = tostring(maxEspDistance)
+                        end
+                        textBox.Font = Enum.Font.GothamBold
+                        textBox.TextSize = 11
+                        textBox.Parent = togButton
+                        
+                        local boxCorner = Instance.new("UICorner")
+                        boxCorner.CornerRadius = UDim.new(0, 4)
+                        boxCorner.Parent = textBox
+                        
+                        textBox.FocusLost:Connect(function()
+                            local num = tonumber(textBox.Text)
+                            if num then
+                                if tab.IsSpeedInput then
+                                    customWalkSpeed = num
+                                    notify("WalkSpeed set to: " .. num)
+                                elseif tab.IsFovInput then
+                                    fovradius = num
+                                    notify("FOV Radius set to: " .. num)
+                                else
+                                    maxEspDistance = num
+                                    notify("Max ESP Distance set to: " .. num)
+                                end
+                                textBox.Text = tostring(num)
+                            else
+                                if tab.IsSpeedInput then
+                                    textBox.Text = tostring(customWalkSpeed)
+                                elseif tab.IsFovInput then
+                                    textBox.Text = tostring(fovradius)
+                                else
+                                    textBox.Text = tostring(maxEspDistance)
+                                end
+                            end
+                        end)
+                    elseif tab.IsPartDropdown then
+                        togButton.BackgroundColor3 = Color3.fromRGB(90, 40, 150)
+                        togButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+                        togButton.Text = "Aim Part: " .. targetPartOption .. " ▼"
+                        
+                        local partFrame = Instance.new("Frame")
+                        partFrame.LayoutOrder = (idx * 2) + 1
+                        partFrame.Size = UDim2.new(1, 0, 0, 96)
+                        partFrame.BackgroundColor3 = Color3.fromRGB(27, 21, 42)
+                        partFrame.BorderSizePixel = 0
+                        partFrame.Visible = false
+                        partFrame.Parent = itemHolder
+                        
+                        local partCorner = Instance.new("UICorner")
+                        partCorner.CornerRadius = UDim.new(0, 6)
+                        partCorner.Parent = partFrame
 
-                if not tab.IsSpeedInput and not tab.IsFovInput and not tab.IsMaxDistInput then
-                    togButton.Font = Enum.Font.GothamBold
-                    togButton.TextSize = 11
-                end
-                togButton.Parent = itemHolder
-                
-                local corner = Instance.new("UICorner")
-                corner.CornerRadius = UDim.new(0, 6)
-                corner.Parent = togButton
-                
-                local currentState = tab.State
-                if not tab.IsButton and not tab.IsScrollingDropdown and not tab.IsPartDropdown and not tab.IsSmoothDropdown and not tab.IsSpeedInput and not tab.IsFovInput and not tab.IsMaxDistInput then
-                    togButton.MouseButton1Click:Connect(function()
-                        currentState = not currentState
-                        togButton.Text = "  " .. tab.Name .. " : " .. (currentState and "ON" or "OFF")
-                        togButton.BackgroundColor3 = currentState and Color3.fromRGB(93, 205, 151) or Color3.fromRGB(38, 29, 57)
-                        togButton.TextColor3 = currentState and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(180, 180, 190)
-                        if tab.Callback then tab.Callback(currentState) end
-                    end)
-                elseif tab.IsButton then
-                    togButton.MouseButton1Click:Connect(function()
-                        if tab.Callback then tab.Callback() end
-                    end)
+                        local partLayout = Instance.new("UIListLayout")
+                        partLayout.SortOrder = Enum.SortOrder.LayoutOrder
+                        partLayout.Padding = UDim.new(0, 4)
+                        partLayout.Parent = partFrame
+
+                        local parts = {"Head", "UpperTorso", "HumanoidRootPart"}
+                        for _, ptName in ipairs(parts) do
+                            local pBtn = Instance.new("TextButton")
+                            pBtn.Size = UDim2.new(1, 0, 0, 28)
+                            pBtn.BackgroundColor3 = (targetPartOption == ptName) and Color3.fromRGB(93, 205, 151) or Color3.fromRGB(38, 29, 57)
+                            pBtn.TextColor3 = Color3.fromRGB(235, 235, 235)
+                            pBtn.Text = "Target: " .. ptName
+                            pBtn.Font = Enum.Font.GothamBold
+                            pBtn.TextSize = 11
+                            pBtn.Parent = partFrame
+                            
+                            local pCorner = Instance.new("UICorner")
+                            pCorner.CornerRadius = UDim.new(0, 4)
+                            pCorner.Parent = pBtn
+                            
+                            pBtn.MouseButton1Click:Connect(function()
+                                targetPartOption = ptName
+                                togButton.Text = "Aim Part: " .. ptName .. " ▼"
+                                notify("Aimbot Part set to: " .. ptName)
+                                partFrame.Visible = false
+                            end)
+                        end
+
+                        togButton.MouseButton1Click:Connect(function()
+                            partFrame.Visible = not partFrame.Visible
+                        end)
+                    elseif tab.IsSmoothDropdown then
+                        togButton.BackgroundColor3 = Color3.fromRGB(110, 50, 180)
+                        togButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+                        togButton.Text = "Aim Mode: Medium ▼"
+                        
+                        local smoothFrame = Instance.new("Frame")
+                        smoothFrame.LayoutOrder = (idx * 2) + 1
+                        smoothFrame.Size = UDim2.new(1, 0, 0, 128)
+                        smoothFrame.BackgroundColor3 = Color3.fromRGB(27, 21, 42)
+                        smoothFrame.BorderSizePixel = 0
+                        smoothFrame.Visible = false
+                        smoothFrame.Parent = itemHolder
+                        
+                        local smoothCorner = Instance.new("UICorner")
+                        smoothCorner.CornerRadius = UDim.new(0, 6)
+                        smoothCorner.Parent = smoothFrame
+
+                        local smoothLayout = Instance.new("UIListLayout")
+                        smoothLayout.SortOrder = Enum.SortOrder.LayoutOrder
+                        smoothLayout.Padding = UDim.new(0, 4)
+                        smoothLayout.Parent = smoothFrame
+
+                        local modes = {
+                            {Name = "Hard (Instant)", Val = 0},
+                            {Name = "Medium (Balanced)", Val = 0.3},
+                            {Name = "Low (Smooth)", Val = 0.6}
+                        }
+                        for _, mode in ipairs(modes) do
+                            local mBtn = Instance.new("TextButton")
+                            mBtn.Size = UDim2.new(1, 0, 0, 28)
+                            mBtn.BackgroundColor3 = (aimbotSmoothing == mode.Val) and Color3.fromRGB(93, 205, 151) or Color3.fromRGB(38, 29, 57)
+                            mBtn.TextColor3 = Color3.fromRGB(235, 235, 235)
+                            mBtn.Text = mode.Name
+                            mBtn.Font = Enum.Font.GothamBold
+                            mBtn.TextSize = 11
+                            mBtn.Parent = smoothFrame
+                            
+                            local mCorner = Instance.new("UICorner")
+                            mCorner.CornerRadius = UDim.new(0, 4)
+                            mCorner.Parent = mBtn
+                            
+                            mBtn.MouseButton1Click:Connect(function()
+                                aimbotSmoothing = mode.Val
+                                togButton.Text = "Aim Mode: " .. mode.Name .. " ▼"
+                                notify("Aimbot Mode: " .. mode.Name)
+                                smoothFrame.Visible = false
+                            end)
+                        end
+
+                        togButton.MouseButton1Click:Connect(function()
+                            smoothFrame.Visible = not smoothFrame.Visible
+                        end)
+                    elseif tab.IsScrollingDropdown then
+                        togButton.BackgroundColor3 = Color3.fromRGB(80, 40, 160)
+                        togButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+                        togButton.Text = "Target: [Select Player] ▼"
+                        
+                        local dropFrame = Instance.new("ScrollingFrame")
+                        dropFrame.LayoutOrder = (idx * 2) + 1
+                        dropFrame.Size = UDim2.new(1, 0, 0, 180)
+                        dropFrame.BackgroundColor3 = Color3.fromRGB(27, 21, 42)
+                        dropFrame.BorderSizePixel = 0
+                        dropFrame.Visible = true
+                        dropFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+                        dropFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+                        dropFrame.ScrollBarThickness = 3
+                        dropFrame.ScrollBarImageColor3 = accentColor
+                        dropFrame.Parent = itemHolder
+                        
+                        local dropCorner = Instance.new("UICorner")
+                        dropCorner.CornerRadius = UDim.new(0, 6)
+                        dropCorner.Parent = dropFrame
+
+                        local dropLayout = Instance.new("UIListLayout")
+                        dropLayout.SortOrder = Enum.SortOrder.LayoutOrder
+                        dropLayout.Padding = UDim.new(0, 4)
+                        dropLayout.Parent = dropFrame
+                        
+                        local function refreshPlayerList()
+                            for _, child in ipairs(dropFrame:GetChildren()) do
+                                if child:IsA("TextButton") then
+                                    child:Destroy()
+                                end
+                            end
+                            
+                            local refreshBtn = Instance.new("TextButton")
+                            refreshBtn.Size = UDim2.new(1, 0, 0, 28)
+                            refreshBtn.BackgroundColor3 = Color3.fromRGB(0, 110, 180)
+                            refreshBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+                            refreshBtn.Text = "↻ Refresh Player List"
+                            refreshBtn.Font = Enum.Font.GothamBold
+                            refreshBtn.TextSize = 11
+                            refreshBtn.Parent = dropFrame
+                            
+                            local refCorner = Instance.new("UICorner")
+                            refCorner.CornerRadius = UDim.new(0, 4)
+                            refCorner.Parent = refreshBtn
+                            
+                            refreshBtn.MouseButton1Click:Connect(function()
+                                refreshPlayerList()
+                                notify("Player list refreshed!")
+                            end)
+                            
+                            for _, p in ipairs(Players:GetPlayers()) do
+                                if p ~= player then
+                                    local pBtn = Instance.new("TextButton")
+                                    pBtn.Size = UDim2.new(1, 0, 0, 28)
+                                    pBtn.BackgroundColor3 = (selectedTargetPlayer == p) and Color3.fromRGB(93, 205, 151) or Color3.fromRGB(38, 29, 57)
+                                    pBtn.TextColor3 = Color3.fromRGB(235, 235, 235)
+                                    pBtn.Text = p.DisplayName .. " (@" .. p.Name .. ")"
+                                    pBtn.Font = Enum.Font.GothamBold
+                                    pBtn.TextSize = 11
+                                    pBtn.Parent = dropFrame
+                                    
+                                    local pCorner = Instance.new("UICorner")
+                                    pCorner.CornerRadius = UDim.new(0, 4)
+                                    pCorner.Parent = pBtn
+                                    
+                                    pBtn.MouseButton1Click:Connect(function()
+                                        selectedTargetPlayer = p
+                                        togButton.Text = "Target: " .. p.Name .. " ▼"
+                                        refreshPlayerList()
+                                        notify("Target selected: " .. p.Name)
+                                    end)
+                                end
+                            end
+                        end
+                        
+                        refreshPlayerList()
+                        Players.PlayerAdded:Connect(refreshPlayerList)
+                        Players.PlayerRemoving:Connect(function(leavingPlayer)
+                            if selectedTargetPlayer == leavingPlayer then
+                                selectedTargetPlayer = nil
+                                togButton.Text = "Target: [Select Player] ▼"
+                            end
+                            refreshPlayerList()
+                        end)
+                        
+                        togButton.MouseButton1Click:Connect(function()
+                            dropFrame.Visible = not dropFrame.Visible
+                            if dropFrame.Visible then
+                                refreshPlayerList()
+                            end
+                        end)
+                    else
+                        togButton.BackgroundColor3 = tab.State and Color3.fromRGB(93, 205, 151) or Color3.fromRGB(38, 29, 57)
+                        togButton.TextColor3 = tab.State and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(180, 180, 190)
+                        togButton.Text = "  " .. tab.Name .. " : " .. (tab.State and "ON" or "OFF")
+                        togButton.TextXAlignment = Enum.TextXAlignment.Left
+                    end
+                    
+                    if not tab.IsSpeedInput and not tab.IsFovInput and not tab.IsMaxDistInput and not tab.IsScrollingDropdown and not tab.IsPartDropdown and not tab.IsSmoothDropdown and not tab.IsButton then
+                        local pad = Instance.new("UIPadding")
+                        pad.PaddingLeft = UDim.new(0, 6)
+                        pad.Parent = togButton
+                    end
+
+                    if not tab.IsSpeedInput and not tab.IsFovInput and not tab.IsMaxDistInput then
+                        togButton.Font = Enum.Font.GothamBold
+                        togButton.TextSize = 11
+                    end
+                    togButton.Parent = itemHolder
+                    
+                    local corner = Instance.new("UICorner")
+                    corner.CornerRadius = UDim.new(0, 6)
+                    corner.Parent = togButton
+                    
+                    local currentState = tab.State
+                    if not tab.IsButton and not tab.IsScrollingDropdown and not tab.IsPartDropdown and not tab.IsSmoothDropdown and not tab.IsSpeedInput and not tab.IsFovInput and not tab.IsMaxDistInput then
+                        togButton.MouseButton1Click:Connect(function()
+                            currentState = not currentState
+                            togButton.Text = "  " .. tab.Name .. " : " .. (currentState and "ON" or "OFF")
+                            togButton.BackgroundColor3 = currentState and Color3.fromRGB(93, 205, 151) or Color3.fromRGB(38, 29, 57)
+                            togButton.TextColor3 = currentState and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(180, 180, 190)
+                            if tab.Callback then tab.Callback(currentState) end
+                        end)
+                    elseif tab.IsButton then
+                        togButton.MouseButton1Click:Connect(function()
+                            if tab.Callback then tab.Callback() end
+                        end)
+                    end
                 end
             end
             
@@ -780,6 +941,20 @@ catVisuals:CreateTab("esp skeleton", {enabled = true}, function(tog) skeletonena
 catVisuals:CreateTab("esp tracers", {enabled = true}, function(tog) tracerenabled = tog end)
 catVisuals:CreateTab("distance tags", {enabled = true}, function(tog) showdist = tog end)
 catVisuals:CreateTab("max esp distance", {isMaxDistInput = true})
+catVisuals:CreateTab("center crosshair", {enabled = false}, function(tog) crosshairEnabled = tog end)
+catVisuals:CreateTab("fullbright (no fog)", {enabled = false}, function(tog)
+    fullbrightEnabled = tog
+    if not tog then
+        Lighting.Brightness = defaultLighting.Brightness
+        Lighting.ClockTime = defaultLighting.ClockTime
+        Lighting.FogEnd = defaultLighting.FogEnd
+        Lighting.GlobalShadows = defaultLighting.GlobalShadows
+        Lighting.Ambient = defaultLighting.Ambient
+    end
+end)
+catVisuals:CreateTab("fps booster (anti-lag)", {isButton = true}, function()
+    applyFpsBoost()
+end)
 
 --// Category 3: Combat (Aimbot & FOV)
 local catCombat = Window:CreateCategory("Combat")
@@ -799,10 +974,70 @@ catCombat:CreateTab("aim smoothness", {isSmoothDropdown = true})
 catCombat:CreateTab("fov circle", {enabled = false}, function(tog) fovcircleenabled = tog end)
 catCombat:CreateTab("fov value", {isFovInput = true})
 
---// Category 4: Teleport
+--// Category 4: Customizable POV & Camera
+local catPOV = Window:CreateCategory("POV & Cam")
+catPOV:CreateTab("custom pov & fov", {enabled = false}, function(tog)
+    povenabled = tog
+    if not tog then
+        if workspace.CurrentCamera then
+            workspace.CurrentCamera.FieldOfView = 70
+        end
+        local char = player.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum.CameraOffset = Vector3.zero
+        end
+    end
+end)
+catPOV:CreateTab("camera fov (angle)", {isSlider = true, min = 40, max = 120, default = 90, step = 1, resetGroup = "POV"}, function(val)
+    cameraFovValue = val
+end)
+catPOV:CreateTab("pov shoulder (x)", {isSlider = true, min = -10, max = 10, default = 0, step = 0.5, resetGroup = "POV"}, function(val)
+    povOffsetX = val
+end)
+catPOV:CreateTab("pov height (y)", {isSlider = true, min = -10, max = 10, default = 0, step = 0.5, resetGroup = "POV"}, function(val)
+    povOffsetY = val
+end)
+catPOV:CreateTab("pov distance (z)", {isSlider = true, min = -15, max = 15, default = 0, step = 0.5, resetGroup = "POV"}, function(val)
+    povOffsetZ = val
+end)
+catPOV:CreateTab("unlock max zoom", {enabled = false}, function(tog)
+    unlockZoomEnabled = tog
+    if not tog then
+        player.CameraMaxZoomDistance = defaultMaxZoom
+    end
+end)
+catPOV:CreateTab("ipad shift-lock", {enabled = false}, function(tog)
+    shiftlockEnabled = tog
+    local char = player.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if hum and not tog then
+        hum.AutoRotate = true
+    end
+end)
+catPOV:CreateTab("reset pov defaults", {isButton = true}, function()
+    for _, resetFn in ipairs(sliderResetCallbacks) do
+        resetFn()
+    end
+    if not povenabled and workspace.CurrentCamera then
+        workspace.CurrentCamera.FieldOfView = 70
+    end
+    notify("POV sliders reset to default!")
+end)
+
+--// Category 5: Teleport & Target
 local catTeleport = Window:CreateCategory("Teleport")
 catTeleport:CreateTab("select player", {isScrollingDropdown = true})
 catTeleport:CreateTab("teleport to target [T]", {isButton = true}, function() teleportToTarget() end)
+catTeleport:CreateTab("spectate target", {enabled = false}, function(tog)
+    spectateEnabled = tog
+    if not tog and player.Character then
+        local myHum = player.Character:FindFirstChildOfClass("Humanoid")
+        if myHum and workspace.CurrentCamera then
+            workspace.CurrentCamera.CameraSubject = myHum
+        end
+    end
+end)
 
 Library:Load()
 notify("kyuzxc menu loaded successfully!")
@@ -884,7 +1119,7 @@ RunService.Stepped:Connect(function()
     end
 end)
 
---// Visuals: Round FOV Circle & Mobile Aimbot & ESP Drawing
+--// Visuals: Round FOV Circle, Crosshair, Mobile Aimbot & ESP Drawing
 local visualGui = Instance.new("ScreenGui")
 visualGui.Name = "KyuzxcVisualsGui"
 visualGui.ResetOnSpawn = false
@@ -910,6 +1145,40 @@ fovCorner.Parent = fovCircle
 local fovAspect = Instance.new("UIAspectRatioConstraint")
 fovAspect.AspectRatio = 1
 fovAspect.Parent = fovCircle
+
+--// Center Crosshair Overlay
+local crosshairHolder = Instance.new("Frame")
+crosshairHolder.Name = "CrosshairHolder"
+crosshairHolder.AnchorPoint = Vector2.new(0.5, 0.5)
+crosshairHolder.Position = UDim2.fromScale(0.5, 0.5)
+crosshairHolder.Size = UDim2.fromOffset(24, 24)
+crosshairHolder.BackgroundTransparency = 1
+crosshairHolder.Visible = false
+crosshairHolder.Parent = visualGui
+
+local chHorizontal = Instance.new("Frame")
+chHorizontal.AnchorPoint = Vector2.new(0.5, 0.5)
+chHorizontal.Position = UDim2.fromScale(0.5, 0.5)
+chHorizontal.Size = UDim2.fromOffset(18, 2)
+chHorizontal.BackgroundColor3 = accentColor
+chHorizontal.BorderSizePixel = 0
+chHorizontal.Parent = crosshairHolder
+
+local chVertical = Instance.new("Frame")
+chVertical.AnchorPoint = Vector2.new(0.5, 0.5)
+chVertical.Position = UDim2.fromScale(0.5, 0.5)
+chVertical.Size = UDim2.fromOffset(2, 18)
+chVertical.BackgroundColor3 = accentColor
+chVertical.BorderSizePixel = 0
+chVertical.Parent = crosshairHolder
+
+local chDot = Instance.new("Frame")
+chDot.AnchorPoint = Vector2.new(0.5, 0.5)
+chDot.Position = UDim2.fromScale(0.5, 0.5)
+chDot.Size = UDim2.fromOffset(4, 4)
+chDot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+chDot.BorderSizePixel = 0
+chDot.Parent = crosshairHolder
 
 local function isPlayerTeammate(p)
     if p.Team ~= nil and player.Team ~= nil and not p.Neutral and not player.Neutral then
@@ -1188,13 +1457,67 @@ local function updatePlayerESP(p)
 end
 
 RunService.RenderStepped:Connect(function()
+    Camera = workspace.CurrentCamera
+    local myChar = player.Character
+    local myHum = myChar and myChar:FindFirstChildOfClass("Humanoid")
+    local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
+
+    --// 1. Custom POV & Camera Offset Enforcement
+    if povenabled then
+        if Camera and Camera.FieldOfView ~= cameraFovValue then
+            Camera.FieldOfView = cameraFovValue
+        end
+        if myHum then
+            myHum.CameraOffset = Vector3.new(povOffsetX, povOffsetY, povOffsetZ)
+        end
+    end
+
+    if unlockZoomEnabled then
+        player.CameraMaxZoomDistance = customMaxZoom
+        player.CameraMinZoomDistance = 0.5
+    end
+
+    --// 2. iPad Shift-Lock (Character faces Camera horizontal direction)
+    if shiftlockEnabled and myHum and myHrp and Camera then
+        myHum.AutoRotate = false
+        local lookVec = Camera.CFrame.LookVector
+        local flatLook = Vector3.new(lookVec.X, 0, lookVec.Z)
+        if flatLook.Magnitude > 0.001 then
+            myHrp.CFrame = CFrame.new(myHrp.Position, myHrp.Position + flatLook)
+        end
+    end
+
+    --// 3. Spectate Selected Target
+    if spectateEnabled and Camera then
+        if selectedTargetPlayer and selectedTargetPlayer.Character then
+            local targetHum = selectedTargetPlayer.Character:FindFirstChildOfClass("Humanoid")
+            if targetHum then
+                Camera.CameraSubject = targetHum
+            end
+        elseif myHum then
+            Camera.CameraSubject = myHum
+        end
+    end
+
+    --// 4. Fullbright Enforcement
+    if fullbrightEnabled then
+        Lighting.Brightness = 2
+        Lighting.ClockTime = 14
+        Lighting.FogEnd = 100000
+        Lighting.GlobalShadows = false
+        Lighting.Ambient = Color3.fromRGB(178, 178, 178)
+    end
+
+    --// 5. Crosshair & FOV Circle Updates
+    crosshairHolder.Visible = crosshairEnabled
     fovCircle.Visible = fovcircleenabled
-    if fovcircleenabled then
+    if fovcircleenabled and Camera then
         fovCircle.Size = UDim2.new(0, fovradius * 2, 0, fovradius * 2)
         fovCircle.Position = UDim2.new(0, Camera.ViewportSize.X / 2, 0, Camera.ViewportSize.Y / 2)
     end
 
-    if aimbotenabled and aimbotactive then
+    --// 6. Aimbot Update
+    if aimbotenabled and aimbotactive and Camera then
         local targetPart = getClosestPlayerInFOV()
         if targetPart then
             local currentCFrame = Camera.CFrame
@@ -1207,6 +1530,7 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
+    --// 7. Player ESP Update
     for _, p in ipairs(Players:GetPlayers()) do
         if p ~= player then
             updatePlayerESP(p)
