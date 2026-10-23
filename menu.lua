@@ -1,4 +1,4 @@
---// Kyuzxc Simple Mod Menu (iPad Edition + Resizable, Responsive Violet Sidebar & Fully Working Functions)
+--// Kyuzxc Simple Mod Menu (iPad Edition + Unlimited Ammo & Fast Reload)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -46,7 +46,8 @@ local infjumpenabled = false
 local speedenabled = false
 local customWalkSpeed = 50
 local flyenabled = false
-local godmodeenabled = false
+local unlimitammoenabled = false
+local fastreloadenabled = false
 local fovcircleenabled = false
 local fovradius = 120
 local aimbotenabled = false
@@ -285,7 +286,7 @@ function Library:Load()
         minCorner.CornerRadius = UDim.new(0, 6)
         minCorner.Parent = minBtn
 
-        --// Sidebar Navigation (Kaliwa - Responsive Size)
+        --// Sidebar Navigation (Kaliwa)
         local sidebar = Instance.new("ScrollingFrame")
         sidebar.Size = UDim2.new(0, 120, 1, -54)
         sidebar.Position = UDim2.new(0, 8, 0, 48)
@@ -312,7 +313,7 @@ function Library:Load()
         sidePadding.PaddingRight = UDim.new(0, 6)
         sidePadding.Parent = sidebar
         
-        --// Content Container (Kanan - Responsive)
+        --// Content Container (Kanan)
         local contentContainer = Instance.new("ScrollingFrame")
         contentContainer.Size = UDim2.new(1, -140, 1, -54)
         contentContainer.Position = UDim2.new(0, 134, 0, 48)
@@ -329,7 +330,7 @@ function Library:Load()
         contentLayout.Padding = UDim.new(0, 6)
         contentLayout.Parent = contentContainer
 
-        --// Resize Grip (Pang-resize ng Menu sa Ipad/PC)
+        --// Resize Grip
         local resizeGrip = Instance.new("TextButton")
         resizeGrip.Name = "ResizeGrip"
         resizeGrip.Size = UDim2.fromOffset(20, 20)
@@ -766,8 +767,11 @@ catMovement:CreateTab("speed value", {isSpeedInput = true})
 catMovement:CreateTab("fly", {enabled = false}, function(tog) 
     flyenabled = tog 
 end)
-catMovement:CreateTab("god mode", {enabled = false}, function(tog) 
-    godmodeenabled = tog 
+catMovement:CreateTab("unlimited ammo", {enabled = false}, function(tog) 
+    unlimitammoenabled = tog 
+end)
+catMovement:CreateTab("fast reload", {enabled = false}, function(tog) 
+    fastreloadenabled = tog 
 end)
 
 --// Category 2: Visuals
@@ -842,9 +846,25 @@ RunService.Stepped:Connect(function()
             if speedenabled then
                 humanoid.WalkSpeed = customWalkSpeed
             end
-            
-            if godmodeenabled then
-                humanoid.Health = humanoid.MaxHealth
+        end
+        
+        -- Unlimited Ammo & Fast Reload Hook (Universal Gun Tool Scan)
+        if unlimitammoenabled or fastreloadenabled then
+            local tool = char:FindFirstChildOfClass("Tool")
+            if tool then
+                pcall(function()
+                    for _, v in pairs(tool:GetDescendants()) do
+                        if v:IsA("NumberValue") or v:IsA("IntValue") then
+                            local name = string.lower(v.Name)
+                            if unlimitammoenabled and (string.find(name, "ammo") or string.find(name, "clip") or string.find(name, "bullets")) then
+                                v.Value = 999
+                            end
+                            if fastreloadenabled and (string.find(name, "reload") or string.find(name, "cooldown") or string.find(name, "rate")) then
+                                v.Value = 0.01
+                            end
+                        end
+                    end
+                end)
             end
         end
         
