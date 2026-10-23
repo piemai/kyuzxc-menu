@@ -3,6 +3,9 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Lighting = game:GetService("Lighting")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
+local VirtualUser = game:GetService("VirtualUser")
 local CoreGui = game:GetService("CoreGui")
 local StarterGui = game:GetService("StarterGui")
 local Camera = workspace.CurrentCamera
@@ -46,8 +49,18 @@ local noclipped = false
 local infjumpenabled = false
 local speedenabled = false
 local customWalkSpeed = 50
+local jumppowerenabled = false
+local customJumpPower = 100
+local gravityenabled = false
+local customGravity = 80
 local flyenabled = false
+local customFlySpeed = 60
 local godmodeenabled = false
+local spinbotenabled = false
+local spinSpeed = 35
+local antiafkenabled = true
+local hitboxenabled = false
+local hitboxSize = 12
 local fovcircleenabled = false
 local fovradius = 120
 local aimbotenabled = false
@@ -56,7 +69,7 @@ local targetPartOption = "Head"
 local aimbotSmoothing = 0.3
 local selectedTargetPlayer = nil
 
---// NEW: POV, Camera & Extra Visual States
+--// POV, Camera & Extra Visual States
 local povenabled = false
 local cameraFovValue = 90
 local povOffsetX = 0
@@ -78,12 +91,67 @@ local defaultLighting = {
     Ambient = Lighting.Ambient
 }
 local defaultMaxZoom = player.CameraMaxZoomDistance
+local defaultGravity = workspace.Gravity
 local sliderResetCallbacks = {}
 
 --// ESP Colors & Violet Theme
 local teamColor = Color3.fromRGB(0, 255, 120)   -- Green (Team)
 local enemyColor = Color3.fromRGB(255, 75, 75)  -- Red (Enemy)
 local accentColor = Color3.fromRGB(165, 95, 255) -- Violet Accent
+
+--// Anti-AFK Connection
+player.Idled:Connect(function()
+    if antiafkenabled then
+        pcall(function()
+            VirtualUser:CaptureController()
+            VirtualUser:ClickButton2(Vector2.zero)
+        end)
+    end
+end)
+
+--// Upgraded God Mode Helper (Anti-Killbrick / CanTouch Bypass + Dead State Protection)
+local function setGodModeState(char, enabled)
+    if not char then return end
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        pcall(function()
+            humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, not enabled)
+            humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, not enabled)
+            humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, not enabled)
+            if enabled and humanoid.Health > 0 then
+                humanoid.Health = humanoid.MaxHealth
+            end
+        end)
+    end
+    for _, part in ipairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CanTouch = not enabled
+        end
+    end
+end
+
+player.CharacterAdded:Connect(function(newChar)
+    task.wait(0.3)
+    if godmodeenabled then
+        setGodModeState(newChar, true)
+    end
+end)
+
+--// Reset Hitboxes Helper
+local function resetEnemyHitboxes()
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= player and p.Character then
+            local hrp = p.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                pcall(function()
+                    hrp.Size = Vector3.new(2, 2, 1)
+                    hrp.Transparency = 1
+                    hrp.CanCollide = false
+                end)
+            end
+        end
+    end
+end
 
 --// Floating Draggable Mobile Aimbot Toggle Button
 local mobileGui = Instance.new("ScreenGui")
@@ -195,6 +263,23 @@ local function applyFpsBoost()
         end
     end
     notify("FPS Boost applied! Shadows & particles reduced.")
+end
+
+--// Server Hop Helper
+local function serverHop()
+    notify("Searching for another server...")
+    local success, result = pcall(function()
+        return HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"))
+    end)
+    if success and result and result.data then
+        for _, srv in ipairs(result.data) do
+            if type(srv) == "table" and srv.playing < srv.maxPlayers and srv.id ~= game.JobId then
+                TeleportService:TeleportToPlaceInstance(game.PlaceId, srv.id, player)
+                return
+            end
+        end
+    end
+    notify("No available server found right now.")
 end
 
 --// Library Framework (Resizable & Responsive Sidebar Edition)
@@ -509,7 +594,6 @@ function Library:Load()
                     local currentVal = tab.Default
                     local function setSliderValue(val)
                         local snapped = math.floor((val / tab.Step) + 0.5) * tab.Step
-                        -- Clean floating point precision
                         snapped = tonumber(string.format("%.2f", math.clamp(snapped, tab.Min, tab.Max)))
                         currentVal = snapped
                         local alpha = math.clamp((snapped - tab.Min) / (tab.Max - tab.Min), 0, 1)
@@ -905,6 +989,13 @@ local Window = Library:CreateWindow("kyuzxc simple mod menu [ipad]")
 
 --// Category 1: Movement
 local catMovement = Window:CreateCategory("Movement")
+catMovement:CreateTab("god mode (anti-touch)", {enabled = false}, function(tog) 
+    godmodeenabled = tog
+    if player.Character then
+        setGodModeState(player.Character, tog)
+    end
+    notify("God Mode (Anti-Killbrick): " .. (tog and "ON" or "OFF"))
+end)
 catMovement:CreateTab("noclip", {enabled = false}, function(tog) 
     noclipped = tog 
     if not tog and player.Character then
@@ -924,11 +1015,30 @@ catMovement:CreateTab("speed hack", {enabled = false}, function(tog)
     end
 end)
 catMovement:CreateTab("speed value", {isSpeedInput = true})
-catMovement:CreateTab("fly", {enabled = false}, function(tog) 
+catMovement:CreateTab("jump power hack", {enabled = false}, function(tog)
+    jumppowerenabled = tog
+    if not tog and player.Character then
+        local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then humanoid.JumpPower = 50 end
+    end
+end)
+catMovement:CreateTab("jump power", {isSlider = true, min = 50, max = 300, default = 100, step = 5}, function(val)
+    customJumpPower = val
+end)
+catMovement:CreateTab("low gravity", {enabled = false}, function(tog)
+    gravityenabled = tog
+    if not tog then
+        workspace.Gravity = defaultGravity
+    end
+end)
+catMovement:CreateTab("gravity value", {isSlider = true, min = 10, max = 196, default = 80, step = 2}, function(val)
+    customGravity = val
+end)
+catMovement:CreateTab("fly (ipad + pc)", {enabled = false}, function(tog) 
     flyenabled = tog 
 end)
-catMovement:CreateTab("god mode", {enabled = false}, function(tog) 
-    godmodeenabled = tog 
+catMovement:CreateTab("fly speed", {isSlider = true, min = 20, max = 250, default = 60, step = 5}, function(val)
+    customFlySpeed = val
 end)
 
 --// Category 2: Visuals
@@ -956,7 +1066,7 @@ catVisuals:CreateTab("fps booster (anti-lag)", {isButton = true}, function()
     applyFpsBoost()
 end)
 
---// Category 3: Combat (Aimbot & FOV)
+--// Category 3: Combat (Aimbot, Hitbox & FOV)
 local catCombat = Window:CreateCategory("Combat")
 catCombat:CreateTab("aimbot button", {enabled = false}, function(tog) 
     aimbotenabled = tog 
@@ -973,6 +1083,15 @@ catCombat:CreateTab("aim part", {isPartDropdown = true})
 catCombat:CreateTab("aim smoothness", {isSmoothDropdown = true})
 catCombat:CreateTab("fov circle", {enabled = false}, function(tog) fovcircleenabled = tog end)
 catCombat:CreateTab("fov value", {isFovInput = true})
+catCombat:CreateTab("hitbox expander", {enabled = false}, function(tog)
+    hitboxenabled = tog
+    if not tog then
+        resetEnemyHitboxes()
+    end
+end)
+catCombat:CreateTab("hitbox size", {isSlider = true, min = 2, max = 35, default = 12, step = 1}, function(val)
+    hitboxSize = val
+end)
 
 --// Category 4: Customizable POV & Camera
 local catPOV = Window:CreateCategory("POV & Cam")
@@ -1039,8 +1158,27 @@ catTeleport:CreateTab("spectate target", {enabled = false}, function(tog)
     end
 end)
 
+--// Category 6: Misc & Server
+local catMisc = Window:CreateCategory("Misc")
+catMisc:CreateTab("spinbot (anti-hit)", {enabled = false}, function(tog)
+    spinbotenabled = tog
+end)
+catMisc:CreateTab("spin speed", {isSlider = true, min = 10, max = 100, default = 35, step = 5}, function(val)
+    spinSpeed = val
+end)
+catMisc:CreateTab("anti-afk (no idle kick)", {enabled = true}, function(tog)
+    antiafkenabled = tog
+end)
+catMisc:CreateTab("rejoin current server", {isButton = true}, function()
+    notify("Rejoining current server...")
+    TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, player)
+end)
+catMisc:CreateTab("server hop (new server)", {isButton = true}, function()
+    serverHop()
+end)
+
 Library:Load()
-notify("kyuzxc menu loaded successfully!")
+notify("kyuzxc menu v2.5 loaded successfully!")
 
 UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
@@ -1061,7 +1199,18 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
+local function isPlayerTeammate(p)
+    if p.Team ~= nil and player.Team ~= nil and not p.Neutral and not player.Neutral then
+        return p.Team == player.Team
+    end
+    return false
+end
+
 RunService.Stepped:Connect(function()
+    if gravityenabled then
+        workspace.Gravity = customGravity
+    end
+
     local char = player.Character
     if char then
         local humanoid = char:FindFirstChildOfClass("Humanoid")
@@ -1072,18 +1221,38 @@ RunService.Stepped:Connect(function()
                 if part:IsA("BasePart") then part.CanCollide = false end
             end
         end
+
+        if godmodeenabled then
+            for _, part in ipairs(char:GetDescendants()) do
+                if part:IsA("BasePart") and part.CanTouch then
+                    part.CanTouch = false
+                end
+            end
+        end
         
         if humanoid then
             if speedenabled then
                 humanoid.WalkSpeed = customWalkSpeed
             end
+
+            if jumppowerenabled then
+                humanoid.UseJumpPower = true
+                humanoid.JumpPower = customJumpPower
+            end
             
             if godmodeenabled then
-                humanoid.Health = humanoid.MaxHealth
+                humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+                if humanoid.Health > 0 and humanoid.Health < humanoid.MaxHealth then
+                    humanoid.Health = humanoid.MaxHealth
+                end
             end
         end
         
         if hrp then
+            if spinbotenabled and not flyenabled then
+                hrp.CFrame = hrp.CFrame * CFrame.Angles(0, math.rad(spinSpeed), 0)
+            end
+
             local bv = hrp:FindFirstChild("KyuzxcFlyBodyVelocity")
             local bg = hrp:FindFirstChild("KyuzxcFlyBodyGyro")
             
@@ -1105,15 +1274,46 @@ RunService.Stepped:Connect(function()
                 
                 bg.CFrame = Camera.CFrame
                 local moveDir = Vector3.new(0, 0, 0)
+                
+                -- Keyboard Controls (PC)
                 if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + Camera.CFrame.LookVector end
                 if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - Camera.CFrame.LookVector end
                 if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - Camera.CFrame.RightVector end
                 if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + Camera.CFrame.RightVector end
                 
-                bv.Velocity = moveDir * 50
+                -- Touch Thumbstick Support (iPad / Mobile)
+                if moveDir.Magnitude == 0 and humanoid and humanoid.MoveDirection.Magnitude > 0 then
+                    local camRight = Camera.CFrame.RightVector
+                    local flatRight = Vector3.new(camRight.X, 0, camRight.Z).Unit
+                    local flatForward = Vector3.new(Camera.CFrame.LookVector.X, 0, Camera.CFrame.LookVector.Z).Unit
+                    local forwardDot = humanoid.MoveDirection:Dot(flatForward)
+                    local rightDot = humanoid.MoveDirection:Dot(flatRight)
+                    moveDir = (Camera.CFrame.LookVector * forwardDot) + (Camera.CFrame.RightVector * rightDot)
+                end
+                
+                bv.Velocity = moveDir * customFlySpeed
             else
                 if bv then bv:Destroy() end
                 if bg then bg:Destroy() end
+            end
+        end
+    end
+
+    --// Hitbox Expander Loop
+    if hitboxenabled then
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= player and not isPlayerTeammate(p) and p.Character then
+                local enemyHrp = p.Character:FindFirstChild("HumanoidRootPart")
+                local enemyHum = p.Character:FindFirstChildOfClass("Humanoid")
+                if enemyHrp and enemyHum and enemyHum.Health > 0 then
+                    pcall(function()
+                        enemyHrp.Size = Vector3.new(hitboxSize, hitboxSize, hitboxSize)
+                        enemyHrp.Transparency = 0.65
+                        enemyHrp.Color = accentColor
+                        enemyHrp.Material = Enum.Material.Neon
+                        enemyHrp.CanCollide = false
+                    end)
+                end
             end
         end
     end
@@ -1179,13 +1379,6 @@ chDot.Size = UDim2.fromOffset(4, 4)
 chDot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 chDot.BorderSizePixel = 0
 chDot.Parent = crosshairHolder
-
-local function isPlayerTeammate(p)
-    if p.Team ~= nil and player.Team ~= nil and not p.Neutral and not player.Neutral then
-        return p.Team == player.Team
-    end
-    return false
-end
 
 local function getClosestPlayerInFOV()
     local closestTarget = nil
