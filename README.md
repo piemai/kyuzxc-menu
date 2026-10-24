@@ -34,4 +34,4 @@ A feature-packed, lightweight Roblox mod menu built with a clean **Violet Sideba
 Copy and paste the following loadstring command into your Roblox executor:
 
 ```lua
-loadstring(game:HttpGet("https://raw.githubusercontent.com/piemai/kyuzxc-menu/refs/heads/main/menu.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/piemai/kyuzxc-menu/refs/heads/main/menu.lua?t=" .. tostring(os.time())))()
