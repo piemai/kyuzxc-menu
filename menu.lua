@@ -1,5 +1,5 @@
---// Kyuzxc Mod Menu (God Level / Elite Edition v5.0)
---// Features: Modern Glassmorphic UI, Custom Animations, Dragging, Config Saver, Chams, ESP, and Aimbot.
+--// Kyuzxc Mod Menu (God Level / Elite Edition v5.1 with Bulletproof Noclip)
+--// Features: Modern Glassmorphic UI, Bulletproof Constant Noclip, Chams, ESP, Aimbot, Config Saver.
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -27,7 +27,7 @@ end)
 local function notify(msg)
     pcall(function()
         StarterGui:SetCore("SendNotification", {
-            Title = "Kyuzxc Elite v5",
+            Title = "Kyuzxc Elite v5.1",
             Text = msg,
             Duration = 2.5
         })
@@ -939,7 +939,7 @@ function Library:Load()
     end
 end
 
-local Window = Library:CreateWindow("kyuzxc elite god menu v5")
+local Window = Library:CreateWindow("kyuzxc elite god menu v5.1")
 
 local catMovement = Window:CreateCategory("Movement")
 catMovement:CreateTab("god mode", {enabled = false}, function(tog) godmodeenabled = tog if player.Character then setGodModeState(player.Character, tog) end notify("God Mode: " .. (tog and "ON" or "OFF")) end)
@@ -1014,7 +1014,7 @@ catSettings:CreateTab("server hop", {isButton = true}, function()
 end)
 
 Library:Load()
-notify("Kyuzxc Elite God Menu Loaded Successfully!")
+notify("Kyuzxc Elite God Menu v5.1 Loaded Successfully!")
 
 UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
@@ -1056,9 +1056,12 @@ RunService.RenderStepped:Connect(function()
         local humanoid = char:FindFirstChildOfClass("Humanoid")
         local hrp = char:FindFirstChild("HumanoidRootPart")
         
+        -- Bulletproof Constant Noclip Loop
         if noclipped then
             for _, part in ipairs(char:GetDescendants()) do
-                if part:IsA("BasePart") then part.CanCollide = false end
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
             end
         end
 
