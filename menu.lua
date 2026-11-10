@@ -1,4 +1,4 @@
---// Kyuzxc Simple Mod Menu (Ultimate iPad & Delta iOS Edition v3.0)
+--// Kyuzxc Simple Mod Menu (Ultimate iPad & Delta iOS Edition v4.0 with Config Saver & Chams)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -27,7 +27,7 @@ local function notify(msg)
     print("[Kyuzxc] " .. msg)
     pcall(function()
         StarterGui:SetCore("SendNotification", {
-            Title = "Kyuzxc Menu v3",
+            Title = "Kyuzxc Menu v4",
             Text = msg,
             Duration = 3
         })
@@ -42,6 +42,7 @@ local boxenabled = true
 local skeletonenabled = true
 local tracerenabled = true
 local healthbarenabled = true
+local chamsenabled = false
 local showdist = true
 local maxEspDistance = 400
 local noclipped = false
@@ -85,7 +86,40 @@ local defaultMaxZoom = player.CameraMaxZoomDistance or 400
 local defaultGravity = workspace.Gravity
 local sliderResetCallbacks = {}
 
---// Themes Definition (Pwede magpalit ng kulay!)
+--// Config Saving System File
+local ConfigFileName = "KyuzxcModMenuConfig.json"
+
+local function saveConfig()
+    pcall(function()
+        local data = {
+            WalkSpeed = customWalkSpeed,
+            JumpPower = customJumpPower,
+            Gravity = customGravity,
+            MaxDist = maxEspDistance,
+            FovRadius = fovradius
+        }
+        writefile(ConfigFileName, HttpService:JSONEncode(data))
+        notify("Config Saved Successfully!")
+    end)
+end
+
+local function loadConfig()
+    pcall(function()
+        if isfile and isfile(ConfigFileName) then
+            local decoded = HttpService:JSONDecode(readfile(ConfigFileName))
+            if decoded then
+                if decoded.WalkSpeed then customWalkSpeed = decoded.WalkSpeed end
+                if decoded.JumpPower then customJumpPower = decoded.JumpPower end
+                if decoded.Gravity then customGravity = decoded.Gravity end
+                if decoded.MaxDist then maxEspDistance = decoded.MaxDist end
+                if decoded.FovRadius then fovradius = decoded.FovRadius end
+            end
+        end
+    end)
+end
+loadConfig()
+
+--// Themes
 local Themes = {
     Violet = Color3.fromRGB(165, 95, 255),
     Crimson = Color3.fromRGB(255, 60, 60),
@@ -94,7 +128,6 @@ local Themes = {
     Gold = Color3.fromRGB(255, 200, 0)
 }
 local accentColor = Themes.Violet
-
 local teamColor = Color3.fromRGB(0, 255, 120)
 local enemyColor = Color3.fromRGB(255, 75, 75)
 
@@ -224,7 +257,7 @@ local function teleportToTarget()
             notify("Your character is not spawned.")
         end
     else
-        notify("No target selected or player left.")
+        notify("No target selected.")
     end
 end
 
@@ -242,7 +275,7 @@ local function applyFpsBoost()
     notify("FPS Boost Applied!")
 end
 
---// Watermark Overlay (I-pakikita ang FPS & Status sa ibabaw ng screen)
+--// Watermark Overlay
 local watermarkGui = Instance.new("ScreenGui")
 watermarkGui.Name = "KyuzxcWatermarkGui"
 watermarkGui.ResetOnSpawn = false
@@ -272,7 +305,7 @@ wmText.BackgroundTransparency = 1
 wmText.TextColor3 = Color3.fromRGB(220, 200, 255)
 wmText.Font = Enum.Font.GothamBold
 wmText.TextSize = 11
-wmText.Text = "Kyuzxc Menu | FPS: 60"
+wmText.Text = "Kyuzxc v4 | FPS: 60"
 wmText.Parent = watermarkFrame
 
 --// UI Library Framework
@@ -355,7 +388,7 @@ function Library:Load()
         titleBar.TextSize = 13
         titleBar.TextXAlignment = Enum.TextXAlignment.Left
         titleBar.Position = UDim2.new(0, 14, 0, 0)
-        titleBar.Text = "  ✨ " .. string.upper(win.Title)
+        titleBar.Text = "  ⚡ " .. string.upper(win.Title)
         titleBar.Parent = header
         
         local closeBtn = Instance.new("TextButton")
@@ -395,6 +428,13 @@ function Library:Load()
         local minCorner = Instance.new("UICorner")
         minCorner.CornerRadius = UDim.new(0, 6)
         minCorner.Parent = minBtn
+
+        -- Keybind toggle for menu visibility
+        UserInputService.InputBegan:Connect(function(input, gp)
+            if input.KeyCode == Enum.KeyCode.RightControl or input.KeyCode == Enum.KeyCode.Insert then
+                mainFrame.Visible = not mainFrame.Visible
+            end
+        end)
 
         local sidebar = Instance.new("ScrollingFrame")
         sidebar.Size = UDim2.new(0, 125, 1, -54)
@@ -944,7 +984,7 @@ function Library:Load()
     end
 end
 
-local Window = Library:CreateWindow("kyuzxc simple mod menu [ipad v3]")
+local Window = Library:CreateWindow("kyuzxc simple mod menu [ipad v4]")
 
 --// Category 1: Movement
 local catMovement = Window:CreateCategory("Movement")
@@ -958,9 +998,9 @@ catMovement:CreateTab("inf jump", {enabled = false}, function(tog) infjumpenable
 catMovement:CreateTab("speed hack", {enabled = false}, function(tog) speedenabled = tog end)
 catMovement:CreateTab("speed value", {isSpeedInput = true})
 catMovement:CreateTab("jump power hack", {enabled = false}, function(tog) jumppowerenabled = tog end)
-catMovement:CreateTab("jump power", {isSlider = true, min = 50, max = 300, default = 100, step = 5}, function(val) customJumpPower = val end)
+catMovement:CreateTab("jump power", {isSlider = true, min = 50, max = 300, default = customJumpPower, step = 5}, function(val) customJumpPower = val end)
 catMovement:CreateTab("low gravity", {enabled = false}, function(tog) gravityenabled = tog if not tog then workspace.Gravity = defaultGravity end end)
-catMovement:CreateTab("gravity value", {isSlider = true, min = 10, max = 196, default = 80, step = 2}, function(val) customGravity = val end)
+catMovement:CreateTab("gravity value", {isSlider = true, min = 10, max = 196, default = customGravity, step = 2}, function(val) customGravity = val end)
 catMovement:CreateTab("fly (ipad + pc)", {enabled = false}, function(tog) flyenabled = tog end)
 catMovement:CreateTab("fly speed", {isSlider = true, min = 20, max = 250, default = 60, step = 5}, function(val) customFlySpeed = val end)
 
@@ -971,6 +1011,7 @@ catVisuals:CreateTab("esp enemy (red)", {enabled = true}, function(tog) showenem
 catVisuals:CreateTab("esp names", {enabled = true}, function(tog) espenabled = tog end)
 catVisuals:CreateTab("esp boxes", {enabled = true}, function(tog) boxenabled = tog end)
 catVisuals:CreateTab("esp health bar", {enabled = true}, function(tog) healthbarenabled = tog end)
+catVisuals:CreateTab("esp chams", {enabled = false}, function(tog) chamsenabled = tog end)
 catVisuals:CreateTab("esp skeleton", {enabled = true}, function(tog) skeletonenabled = tog end)
 catVisuals:CreateTab("esp tracers", {enabled = true}, function(tog) tracerenabled = tog end)
 catVisuals:CreateTab("distance tags", {enabled = true}, function(tog) showdist = tog end)
@@ -1024,6 +1065,7 @@ catTeleport:CreateTab("spectate target", {enabled = false}, function(tog) specta
 local catSettings = Window:CreateCategory("Settings")
 catSettings:CreateTab("menu accent theme", {IsThemeDropdown = true})
 catSettings:CreateTab("menu watermark", {enabled = true}, function(tog) watermarkEnabled = tog watermarkGui.Enabled = tog end)
+catSettings:CreateTab("save settings config", {isButton = true}, function() saveConfig() end)
 catSettings:CreateTab("spinbot", {enabled = false}, function(tog) spinbotenabled = tog end)
 catSettings:CreateTab("spin speed", {isSlider = true, min = 10, max = 100, default = 35, step = 5}, function(val) spinSpeed = val end)
 catSettings:CreateTab("anti-afk", {enabled = true}, function(tog) antiafkenabled = tog end)
@@ -1042,7 +1084,7 @@ catSettings:CreateTab("server hop", {isButton = true}, function()
 end)
 
 Library:Load()
-notify("Kyuzxc Menu v3.0 Loaded!")
+notify("Kyuzxc Menu v4.0 Loaded Successfully!")
 
 UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
@@ -1069,14 +1111,13 @@ local frameCount = 0
 local currentFps = 60
 
 RunService.RenderStepped:Connect(function()
-    -- Calculate FPS for watermark
     frameCount = frameCount + 1
     if tick() - lastTick >= 1 then
         currentFps = frameCount
         frameCount = 0
         lastTick = tick()
         if watermarkEnabled then
-            wmText.Text = "Kyuzxc Menu | FPS: " .. currentFps
+            wmText.Text = "Kyuzxc v4 | FPS: " .. currentFps
         end
     end
 
@@ -1258,6 +1299,7 @@ local function removeESP(p)
             if espCache[p].BoxRight then espCache[p].BoxRight:Destroy() end
             if espCache[p].HealthBg then espCache[p].HealthBg:Destroy() end
             if espCache[p].HealthFill then espCache[p].HealthFill:Destroy() end
+            if espCache[p].ChamsHighlight then espCache[p].ChamsHighlight:Destroy() end
             if espCache[p].SkeletonHolder then espCache[p].SkeletonHolder:Destroy() end
         end)
         espCache[p] = nil
@@ -1274,6 +1316,7 @@ local function hideESP(cache)
     if cache.BoxRight then cache.BoxRight.Visible = false end
     if cache.HealthBg then cache.HealthBg.Visible = false end
     if cache.HealthFill then cache.HealthFill.Visible = false end
+    if cache.ChamsHighlight then cache.ChamsHighlight.Enabled = false end
     if cache.SkeletonLines then
         for _, line in pairs(cache.SkeletonLines) do line.Visible = false end
     end
@@ -1356,6 +1399,15 @@ local function updatePlayerESP(p)
         hbFill.Parent = visualGui
         espCache[p].HealthFill = hbFill
 
+        local highlight = Instance.new("Highlight")
+        highlight.Name = "KyuzxcChams"
+        highlight.Adornee = char
+        highlight.Enabled = false
+        highlight.FillTransparency = 0.5
+        highlight.OutlineTransparency = 0
+        highlight.Parent = char
+        espCache[p].ChamsHighlight = highlight
+
         local skFolder = Instance.new("Folder")
         skFolder.Name = "SkeletonFolder"
         skFolder.Parent = visualGui
@@ -1390,6 +1442,12 @@ local function updatePlayerESP(p)
             end
             cache.TextLabel.Text = p.Name .. distStr
         end
+    end
+
+    if cache.ChamsHighlight then
+        cache.ChamsHighlight.Enabled = chamsenabled
+        cache.ChamsHighlight.FillColor = activeColor
+        cache.ChamsHighlight.OutlineColor = activeColor
     end
 
     Camera = workspace.CurrentCamera
@@ -1436,7 +1494,6 @@ local function updatePlayerESP(p)
                 cache.BoxRight.Size = UDim2.new(0, 1.5, 0, boxSizeY)
                 cache.BoxRight.Position = UDim2.new(0, centerX + (boxSizeX / 2), 0, centerY)
 
-                -- Health Bar Render
                 if cache.HealthBg and cache.HealthFill then
                     cache.HealthBg.Visible = healthbarenabled
                     cache.HealthFill.Visible = healthbarenabled
