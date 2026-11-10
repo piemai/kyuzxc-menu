@@ -1,5 +1,5 @@
---// Kyuzxc Mod Menu (God Level / Elite Edition v5.1 with Bulletproof Noclip)
---// Features: Modern Glassmorphic UI, Bulletproof Constant Noclip, Chams, ESP, Aimbot, Config Saver.
+--// Kyuzxc Mod Menu (God Level / Elite Edition v5.2 with Bulletproof Noclip & Fixed Resize)
+--// Features: Modern Glassmorphic UI, Bulletproof Constant Noclip, Chams, ESP, Aimbot, Config Saver, Fixed Resize.
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -27,7 +27,7 @@ end)
 local function notify(msg)
     pcall(function()
         StarterGui:SetCore("SendNotification", {
-            Title = "Kyuzxc Elite v5.1",
+            Title = "Kyuzxc Elite v5.2",
             Text = msg,
             Duration = 2.5
         })
@@ -456,9 +456,12 @@ function Library:Load()
                 resizing = true
                 resizeStart = input.Position
                 sizeStart = mainFrame.AbsoluteSize
-                input.Changed:Connect(function()
-                    if input.UserInputState == Enum.UserInputState.End then resizing = false end
-                end)
+            end
+        end)
+
+        UserInputService.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.Touch then
+                resizing = false
             end
         end)
 
@@ -939,7 +942,7 @@ function Library:Load()
     end
 end
 
-local Window = Library:CreateWindow("kyuzxc elite god menu v5.1")
+local Window = Library:CreateWindow("kyuzxc elite god menu v5.2")
 
 local catMovement = Window:CreateCategory("Movement")
 catMovement:CreateTab("god mode", {enabled = false}, function(tog) godmodeenabled = tog if player.Character then setGodModeState(player.Character, tog) end notify("God Mode: " .. (tog and "ON" or "OFF")) end)
@@ -1014,7 +1017,7 @@ catSettings:CreateTab("server hop", {isButton = true}, function()
 end)
 
 Library:Load()
-notify("Kyuzxc Elite God Menu v5.1 Loaded Successfully!")
+notify("Kyuzxc Elite God Menu v5.2 Loaded Successfully!")
 
 UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
