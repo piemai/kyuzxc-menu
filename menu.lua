@@ -1,4 +1,4 @@
---// Kyuzxc Simple Mod Menu (iPad Edition + Resizable, Responsive Violet Sidebar & Fully Working Functions)
+--// Kyuzxc Simple Mod Menu (Ultimate iPad & Delta iOS Edition v3.0)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -11,25 +11,23 @@ local StarterGui = game:GetService("StarterGui")
 local Camera = workspace.CurrentCamera
 
 local player = Players.LocalPlayer
-local uiParent = (gethui and gethui()) or CoreGui
+local playerGui = player:WaitForChild("PlayerGui")
+local uiParent = (gethui and gethui()) or (CoreGui:FindFirstChild("CoreGui") and CoreGui) or playerGui
 
--- Linisin ang lumang UI kung naka-load na
-if uiParent:FindFirstChild("KyuzxcModMenu") then
-    uiParent.KyuzxcModMenu:Destroy()
-end
-if uiParent:FindFirstChild("KyuzxcVisualsGui") then
-    uiParent.KyuzxcVisualsGui:Destroy()
-end
-if uiParent:FindFirstChild("KyuzxcMobileAimBtn") then
-    uiParent.KyuzxcMobileAimBtn:Destroy()
-end
+-- Clean old UI instances
+pcall(function()
+    if uiParent:FindFirstChild("KyuzxcModMenu") then uiParent.KyuzxcModMenu:Destroy() end
+    if uiParent:FindFirstChild("KyuzxcVisualsGui") then uiParent.KyuzxcVisualsGui:Destroy() end
+    if uiParent:FindFirstChild("KyuzxcMobileAimBtn") then uiParent.KyuzxcMobileAimBtn:Destroy() end
+    if uiParent:FindFirstChild("KyuzxcWatermarkGui") then uiParent.KyuzxcWatermarkGui:Destroy() end
+end)
 
 --// Notification Helper
 local function notify(msg)
     print("[Kyuzxc] " .. msg)
     pcall(function()
         StarterGui:SetCore("SendNotification", {
-            Title = "Kyuzxc Menu",
+            Title = "Kyuzxc Menu v3",
             Text = msg,
             Duration = 3
         })
@@ -43,8 +41,9 @@ local espenabled = true
 local boxenabled = true
 local skeletonenabled = true
 local tracerenabled = true
+local healthbarenabled = true
 local showdist = true
-local maxEspDistance = 300
+local maxEspDistance = 400
 local noclipped = false
 local infjumpenabled = false
 local speedenabled = false
@@ -69,7 +68,6 @@ local targetPartOption = "Head"
 local aimbotSmoothing = 0.3
 local selectedTargetPlayer = nil
 
---// POV, Camera & Extra Visual States
 local povenabled = false
 local cameraFovValue = 90
 local povOffsetX = 0
@@ -81,25 +79,26 @@ local shiftlockEnabled = false
 local spectateEnabled = false
 local fullbrightEnabled = false
 local crosshairEnabled = false
+local watermarkEnabled = true
 
--- Backup Default Lighting & Camera Values
-local defaultLighting = {
-    Brightness = Lighting.Brightness,
-    ClockTime = Lighting.ClockTime,
-    FogEnd = Lighting.FogEnd,
-    GlobalShadows = Lighting.GlobalShadows,
-    Ambient = Lighting.Ambient
-}
-local defaultMaxZoom = player.CameraMaxZoomDistance
+local defaultMaxZoom = player.CameraMaxZoomDistance or 400
 local defaultGravity = workspace.Gravity
 local sliderResetCallbacks = {}
 
---// ESP Colors & Violet Theme
-local teamColor = Color3.fromRGB(0, 255, 120)   -- Green (Team)
-local enemyColor = Color3.fromRGB(255, 75, 75)  -- Red (Enemy)
-local accentColor = Color3.fromRGB(165, 95, 255) -- Violet Accent
+--// Themes Definition (Pwede magpalit ng kulay!)
+local Themes = {
+    Violet = Color3.fromRGB(165, 95, 255),
+    Crimson = Color3.fromRGB(255, 60, 60),
+    Cyan = Color3.fromRGB(0, 225, 255),
+    Emerald = Color3.fromRGB(0, 255, 120),
+    Gold = Color3.fromRGB(255, 200, 0)
+}
+local accentColor = Themes.Violet
 
---// Anti-AFK Connection
+local teamColor = Color3.fromRGB(0, 255, 120)
+local enemyColor = Color3.fromRGB(255, 75, 75)
+
+--// Anti-AFK
 player.Idled:Connect(function()
     if antiafkenabled then
         pcall(function()
@@ -109,7 +108,7 @@ player.Idled:Connect(function()
     end
 end)
 
---// Upgraded God Mode Helper (Anti-Killbrick / CanTouch Bypass + Dead State Protection)
+--// God Mode Helper
 local function setGodModeState(char, enabled)
     if not char then return end
     local humanoid = char:FindFirstChildOfClass("Humanoid")
@@ -118,26 +117,19 @@ local function setGodModeState(char, enabled)
             humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, not enabled)
             humanoid:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, not enabled)
             humanoid:SetStateEnabled(Enum.HumanoidStateType.FallingDown, not enabled)
-            if enabled and humanoid.Health > 0 then
-                humanoid.Health = humanoid.MaxHealth
-            end
+            if enabled and humanoid.Health > 0 then humanoid.Health = humanoid.MaxHealth end
         end)
     end
     for _, part in ipairs(char:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.CanTouch = not enabled
-        end
+        if part:IsA("BasePart") then part.CanTouch = not enabled end
     end
 end
 
 player.CharacterAdded:Connect(function(newChar)
-    task.wait(0.3)
-    if godmodeenabled then
-        setGodModeState(newChar, true)
-    end
+    task.wait(0.5)
+    if godmodeenabled then setGodModeState(newChar, true) end
 end)
 
---// Reset Hitboxes Helper
 local function resetEnemyHitboxes()
     for _, p in ipairs(Players:GetPlayers()) do
         if p ~= player and p.Character then
@@ -153,7 +145,7 @@ local function resetEnemyHitboxes()
     end
 end
 
---// Floating Draggable Mobile Aimbot Toggle Button
+--// Floating Mobile Aimbot Button
 local mobileGui = Instance.new("ScreenGui")
 mobileGui.Name = "KyuzxcMobileAimBtn"
 mobileGui.ResetOnSpawn = false
@@ -163,7 +155,7 @@ mobileGui.Parent = uiParent
 local aimToggleButton = Instance.new("TextButton")
 aimToggleButton.Size = UDim2.new(0, 75, 0, 75)
 aimToggleButton.AnchorPoint = Vector2.new(0.5, 0.5)
-aimToggleButton.Position = UDim2.new(0.5, 0, 0.85, 0)
+aimToggleButton.Position = UDim2.new(0.5, 0, 0.8, 0)
 aimToggleButton.BackgroundColor3 = Color3.fromRGB(38, 29, 57)
 aimToggleButton.TextColor3 = Color3.fromRGB(255, 75, 75)
 aimToggleButton.Text = "AIM: OFF"
@@ -182,19 +174,14 @@ aimBtnStroke.Color = Color3.fromRGB(255, 75, 75)
 aimBtnStroke.Thickness = 2
 aimBtnStroke.Parent = aimToggleButton
 
---// Custom Smooth Draggable Logic for Touch/Mouse
 local dragging, dragStart, startPos
-
 aimToggleButton.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true
         dragStart = input.Position
         startPos = aimToggleButton.Position
-        
         input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
+            if input.UserInputState == Enum.UserInputState.End then dragging = false end
         end)
     end
 end)
@@ -202,20 +189,12 @@ end)
 UserInputService.InputChanged:Connect(function(input)
     if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
         local delta = input.Position - dragStart
-        aimToggleButton.Position = UDim2.new(
-            startPos.X.Scale, 
-            startPos.X.Offset + delta.X, 
-            startPos.Y.Scale, 
-            startPos.Y.Offset + delta.Y
-        )
+        aimToggleButton.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
 end)
 
 local clickTimer = 0
-aimToggleButton.MouseButton1Down:Connect(function()
-    clickTimer = tick()
-end)
-
+aimToggleButton.MouseButton1Down:Connect(function() clickTimer = tick() end)
 aimToggleButton.MouseButton1Up:Connect(function()
     if tick() - clickTimer < 0.2 then
         aimbotactive = not aimbotactive
@@ -224,18 +203,17 @@ aimToggleButton.MouseButton1Up:Connect(function()
             aimToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
             aimBtnStroke.Color = accentColor
             aimToggleButton.Text = "AIM: ON"
-            notify("Mobile Aimbot Enabled")
+            notify("Aimbot Active")
         else
             aimToggleButton.BackgroundColor3 = Color3.fromRGB(38, 29, 57)
             aimToggleButton.TextColor3 = Color3.fromRGB(255, 75, 75)
             aimBtnStroke.Color = Color3.fromRGB(255, 75, 75)
             aimToggleButton.Text = "AIM: OFF"
-            notify("Mobile Aimbot Disabled")
+            notify("Aimbot Inactive")
         end
     end
 end)
 
---// Teleport Logic
 local function teleportToTarget()
     local myChar = player.Character
     if selectedTargetPlayer and selectedTargetPlayer.Character and selectedTargetPlayer.Character:FindFirstChild("HumanoidRootPart") then
@@ -250,7 +228,6 @@ local function teleportToTarget()
     end
 end
 
---// FPS Booster Helper
 local function applyFpsBoost()
     Lighting.GlobalShadows = false
     Lighting.FogEnd = 9e9
@@ -262,43 +239,49 @@ local function applyFpsBoost()
             v.Enabled = false
         end
     end
-    notify("FPS Boost applied! Shadows & particles reduced.")
+    notify("FPS Boost Applied!")
 end
 
---// Server Hop Helper
-local function serverHop()
-    notify("Searching for another server...")
-    local success, result = pcall(function()
-        return HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"))
-    end)
-    if success and result and result.data then
-        for _, srv in ipairs(result.data) do
-            if type(srv) == "table" and srv.playing < srv.maxPlayers and srv.id ~= game.JobId then
-                TeleportService:TeleportToPlaceInstance(game.PlaceId, srv.id, player)
-                return
-            end
-        end
-    end
-    notify("No available server found right now.")
-end
+--// Watermark Overlay (I-pakikita ang FPS & Status sa ibabaw ng screen)
+local watermarkGui = Instance.new("ScreenGui")
+watermarkGui.Name = "KyuzxcWatermarkGui"
+watermarkGui.ResetOnSpawn = false
+watermarkGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+watermarkGui.Parent = uiParent
 
---// Library Framework (Resizable & Responsive Sidebar Edition)
-local Library = {
-    Windows = {}
-}
+local watermarkFrame = Instance.new("Frame")
+watermarkFrame.Size = UDim2.new(0, 210, 0, 30)
+watermarkFrame.Position = UDim2.new(0, 15, 0, 15)
+watermarkFrame.BackgroundColor3 = Color3.fromRGB(17, 14, 27)
+watermarkFrame.BackgroundTransparency = 0.3
+watermarkFrame.BorderSizePixel = 0
+watermarkFrame.Parent = watermarkGui
+
+local wmCorner = Instance.new("UICorner")
+wmCorner.CornerRadius = UDim.new(0, 6)
+wmCorner.Parent = watermarkFrame
+
+local wmStroke = Instance.new("UIStroke")
+wmStroke.Color = accentColor
+wmStroke.Thickness = 1
+wmStroke.Parent = watermarkFrame
+
+local wmText = Instance.new("TextLabel")
+wmText.Size = UDim2.new(1, 0, 1, 0)
+wmText.BackgroundTransparency = 1
+wmText.TextColor3 = Color3.fromRGB(220, 200, 255)
+wmText.Font = Enum.Font.GothamBold
+wmText.TextSize = 11
+wmText.Text = "Kyuzxc Menu | FPS: 60"
+wmText.Parent = watermarkFrame
+
+--// UI Library Framework
+local Library = { Windows = {} }
 
 function Library:CreateWindow(title)
-    local window = {
-        Title = title,
-        Categories = {}
-    }
-    
+    local window = { Title = title, Categories = {} }
     function window:CreateCategory(catName)
-        local category = {
-            Name = catName,
-            Tabs = {}
-        }
-        
+        local category = { Name = catName, Tabs = {} }
         function category:CreateTab(name, config, callback)
             table.insert(category.Tabs, {
                 Name = name,
@@ -311,6 +294,7 @@ function Library:CreateWindow(title)
                 IsMaxDistInput = config and config.isMaxDistInput or false,
                 IsPartDropdown = config and config.isPartDropdown or false,
                 IsSmoothDropdown = config and config.isSmoothDropdown or false,
+                IsThemeDropdown = config and config.IsThemeDropdown or false,
                 IsSlider = config and config.isSlider or false,
                 Min = config and config.min or 0,
                 Max = config and config.max or 100,
@@ -319,11 +303,9 @@ function Library:CreateWindow(title)
                 ResetGroup = config and config.resetGroup or nil
             })
         end
-        
         table.insert(window.Categories, category)
         return category
     end
-    
     table.insert(Library.Windows, window)
     return window
 end
@@ -337,8 +319,8 @@ function Library:Load()
     
     for _, win in ipairs(self.Windows) do
         local mainFrame = Instance.new("Frame")
-        mainFrame.Size = UDim2.new(0, 440, 0, 360)
-        mainFrame.Position = UDim2.new(0.5, -220, 0.3, -180)
+        mainFrame.Size = UDim2.new(0, 460, 0, 380)
+        mainFrame.Position = UDim2.new(0.5, -230, 0.3, -190)
         mainFrame.BackgroundColor3 = Color3.fromRGB(17, 14, 27)
         mainFrame.BorderSizePixel = 0
         mainFrame.Active = true
@@ -352,10 +334,9 @@ function Library:Load()
         local stroke = Instance.new("UIStroke")
         stroke.Color = accentColor
         stroke.Thickness = 1.5
-        stroke.Transparency = 0.3
+        stroke.Transparency = 0.2
         stroke.Parent = mainFrame
 
-        --// Header
         local header = Instance.new("Frame")
         header.Size = UDim2.new(1, 0, 0, 42)
         header.BackgroundColor3 = Color3.fromRGB(27, 21, 42)
@@ -374,7 +355,7 @@ function Library:Load()
         titleBar.TextSize = 13
         titleBar.TextXAlignment = Enum.TextXAlignment.Left
         titleBar.Position = UDim2.new(0, 14, 0, 0)
-        titleBar.Text = "  " .. string.upper(win.Title)
+        titleBar.Text = "  ✨ " .. string.upper(win.Title)
         titleBar.Parent = header
         
         local closeBtn = Instance.new("TextButton")
@@ -393,13 +374,12 @@ function Library:Load()
         
         closeBtn.MouseButton1Click:Connect(function()
             screenGui:Destroy()
-            if uiParent:FindFirstChild("KyuzxcVisualsGui") then
-                uiParent.KyuzxcVisualsGui:Destroy()
-            end
-            if uiParent:FindFirstChild("KyuzxcMobileAimBtn") then
-                uiParent.KyuzxcMobileAimBtn:Destroy()
-            end
-            notify("Menu closed and unloaded.")
+            pcall(function()
+                if uiParent:FindFirstChild("KyuzxcVisualsGui") then uiParent.KyuzxcVisualsGui:Destroy() end
+                if uiParent:FindFirstChild("KyuzxcMobileAimBtn") then uiParent.KyuzxcMobileAimBtn:Destroy() end
+                if uiParent:FindFirstChild("KyuzxcWatermarkGui") then uiParent.KyuzxcWatermarkGui:Destroy() end
+            end)
+            notify("Menu completely unloaded.")
         end)
         
         local minBtn = Instance.new("TextButton")
@@ -416,9 +396,8 @@ function Library:Load()
         minCorner.CornerRadius = UDim.new(0, 6)
         minCorner.Parent = minBtn
 
-        --// Sidebar Navigation (Kaliwa - Responsive Size)
         local sidebar = Instance.new("ScrollingFrame")
-        sidebar.Size = UDim2.new(0, 120, 1, -54)
+        sidebar.Size = UDim2.new(0, 125, 1, -54)
         sidebar.Position = UDim2.new(0, 8, 0, 48)
         sidebar.BackgroundColor3 = Color3.fromRGB(27, 21, 42)
         sidebar.BorderSizePixel = 0
@@ -443,10 +422,9 @@ function Library:Load()
         sidePadding.PaddingRight = UDim.new(0, 6)
         sidePadding.Parent = sidebar
         
-        --// Content Container (Kanan - Responsive)
         local contentContainer = Instance.new("ScrollingFrame")
-        contentContainer.Size = UDim2.new(1, -140, 1, -54)
-        contentContainer.Position = UDim2.new(0, 134, 0, 48)
+        contentContainer.Size = UDim2.new(1, -145, 1, -54)
+        contentContainer.Position = UDim2.new(0, 139, 0, 48)
         contentContainer.BackgroundTransparency = 1
         contentContainer.BorderSizePixel = 0
         contentContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
@@ -460,7 +438,6 @@ function Library:Load()
         contentLayout.Padding = UDim.new(0, 6)
         contentLayout.Parent = contentContainer
 
-        --// Resize Grip (Pang-resize ng Menu sa iPad/PC)
         local resizeGrip = Instance.new("TextButton")
         resizeGrip.Name = "ResizeGrip"
         resizeGrip.Size = UDim2.fromOffset(20, 20)
@@ -493,8 +470,8 @@ function Library:Load()
         UserInputService.InputChanged:Connect(function(input)
             if resizing and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
                 local delta = input.Position - resizeStart
-                local minW, minH = 360, 280
-                local maxW, maxH = 700, 600
+                local minW, minH = 380, 300
+                local maxW, maxH = 750, 650
                 mainFrame.Size = UDim2.fromOffset(
                     math.clamp(sizeStart.X + delta.X, minW, maxW),
                     math.clamp(sizeStart.Y + delta.Y, minH, maxH)
@@ -599,15 +576,11 @@ function Library:Load()
                         local alpha = math.clamp((snapped - tab.Min) / (tab.Max - tab.Min), 0, 1)
                         fill.Size = UDim2.new(alpha, 0, 1, 0)
                         valBox.Text = tostring(snapped)
-                        if tab.Callback then
-                            tab.Callback(snapped)
-                        end
+                        if tab.Callback then tab.Callback(snapped) end
                     end
 
                     if tab.ResetGroup == "POV" then
-                        table.insert(sliderResetCallbacks, function()
-                            setSliderValue(tab.Default)
-                        end)
+                        table.insert(sliderResetCallbacks, function() setSliderValue(tab.Default) end)
                     end
 
                     local sliding = false
@@ -638,11 +611,7 @@ function Library:Load()
 
                     valBox.FocusLost:Connect(function()
                         local num = tonumber(valBox.Text)
-                        if num then
-                            setSliderValue(num)
-                        else
-                            valBox.Text = tostring(currentVal)
-                        end
+                        if num then setSliderValue(num) else valBox.Text = tostring(currentVal) end
                     end)
                 else
                     local togButton = Instance.new("TextButton")
@@ -656,13 +625,9 @@ function Library:Load()
                     elseif tab.IsSpeedInput or tab.IsFovInput or tab.IsMaxDistInput then
                         togButton.BackgroundColor3 = Color3.fromRGB(38, 29, 57)
                         togButton.TextColor3 = Color3.fromRGB(200, 200, 200)
-                        if tab.IsSpeedInput then
-                            togButton.Text = "  Speed Value:"
-                        elseif tab.IsFovInput then
-                            togButton.Text = "  FOV Radius:"
-                        else
-                            togButton.Text = "  Max ESP Dist:"
-                        end
+                        if tab.IsSpeedInput then togButton.Text = "  Speed Value:"
+                        elseif tab.IsFovInput then togButton.Text = "  FOV Radius:"
+                        else togButton.Text = "  Max ESP Dist:" end
                         togButton.TextXAlignment = Enum.TextXAlignment.Left
                         
                         local textBox = Instance.new("TextBox")
@@ -670,13 +635,7 @@ function Library:Load()
                         textBox.Position = UDim2.new(1, -80, 0.5, -12)
                         textBox.BackgroundColor3 = Color3.fromRGB(17, 14, 27)
                         textBox.TextColor3 = accentColor
-                        if tab.IsSpeedInput then
-                            textBox.Text = tostring(customWalkSpeed)
-                        elseif tab.IsFovInput then
-                            textBox.Text = tostring(fovradius)
-                        else
-                            textBox.Text = tostring(maxEspDistance)
-                        end
+                        textBox.Text = tab.IsSpeedInput and tostring(customWalkSpeed) or (tab.IsFovInput and tostring(fovradius) or tostring(maxEspDistance))
                         textBox.Font = Enum.Font.GothamBold
                         textBox.TextSize = 11
                         textBox.Parent = togButton
@@ -688,27 +647,58 @@ function Library:Load()
                         textBox.FocusLost:Connect(function()
                             local num = tonumber(textBox.Text)
                             if num then
-                                if tab.IsSpeedInput then
-                                    customWalkSpeed = num
-                                    notify("WalkSpeed set to: " .. num)
-                                elseif tab.IsFovInput then
-                                    fovradius = num
-                                    notify("FOV Radius set to: " .. num)
-                                else
-                                    maxEspDistance = num
-                                    notify("Max ESP Distance set to: " .. num)
-                                end
+                                if tab.IsSpeedInput then customWalkSpeed = num notify("Speed: " .. num)
+                                elseif tab.IsFovInput then fovradius = num notify("FOV: " .. num)
+                                else maxEspDistance = num notify("Max Dist: " .. num) end
                                 textBox.Text = tostring(num)
-                            else
-                                if tab.IsSpeedInput then
-                                    textBox.Text = tostring(customWalkSpeed)
-                                elseif tab.IsFovInput then
-                                    textBox.Text = tostring(fovradius)
-                                else
-                                    textBox.Text = tostring(maxEspDistance)
-                                end
                             end
                         end)
+                    elseif tab.IsThemeDropdown then
+                        togButton.BackgroundColor3 = Color3.fromRGB(130, 50, 200)
+                        togButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+                        togButton.Text = "Theme: Violet ▼"
+
+                        local themeFrame = Instance.new("Frame")
+                        themeFrame.LayoutOrder = (idx * 2) + 1
+                        themeFrame.Size = UDim2.new(1, 0, 0, 160)
+                        themeFrame.BackgroundColor3 = Color3.fromRGB(27, 21, 42)
+                        themeFrame.BorderSizePixel = 0
+                        themeFrame.Visible = false
+                        themeFrame.Parent = itemHolder
+
+                        local tCorner = Instance.new("UICorner")
+                        tCorner.CornerRadius = UDim.new(0, 6)
+                        tCorner.Parent = themeFrame
+
+                        local tLayout = Instance.new("UIListLayout")
+                        tLayout.SortOrder = Enum.SortOrder.LayoutOrder
+                        tLayout.Padding = UDim.new(0, 4)
+                        tLayout.Parent = themeFrame
+
+                        for tName, tColor in pairs(Themes) do
+                            local tBtn = Instance.new("TextButton")
+                            tBtn.Size = UDim2.new(1, 0, 0, 28)
+                            tBtn.BackgroundColor3 = Color3.fromRGB(38, 29, 57)
+                            tBtn.TextColor3 = tColor
+                            tBtn.Text = "■ Theme: " .. tName
+                            tBtn.Font = Enum.Font.GothamBold
+                            tBtn.TextSize = 11
+                            tBtn.Parent = themeFrame
+
+                            local tc = Instance.new("UICorner")
+                            tc.CornerRadius = UDim.new(0, 4)
+                            tc.Parent = tBtn
+
+                            tBtn.MouseButton1Click:Connect(function()
+                                accentColor = tColor
+                                stroke.Color = tColor
+                                wmStroke.Color = tColor
+                                togButton.Text = "Theme: " .. tName .. " ▼"
+                                themeFrame.Visible = false
+                                notify("Theme changed to " .. tName)
+                            end)
+                        end
+                        togButton.MouseButton1Click:Connect(function() themeFrame.Visible = not themeFrame.Visible end)
                     elseif tab.IsPartDropdown then
                         togButton.BackgroundColor3 = Color3.fromRGB(90, 40, 150)
                         togButton.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -731,11 +721,10 @@ function Library:Load()
                         partLayout.Padding = UDim.new(0, 4)
                         partLayout.Parent = partFrame
 
-                        local parts = {"Head", "UpperTorso", "HumanoidRootPart"}
-                        for _, ptName in ipairs(parts) do
+                        for _, ptName in ipairs({"Head", "UpperTorso", "HumanoidRootPart"}) do
                             local pBtn = Instance.new("TextButton")
                             pBtn.Size = UDim2.new(1, 0, 0, 28)
-                            pBtn.BackgroundColor3 = (targetPartOption == ptName) and Color3.fromRGB(93, 205, 151) or Color3.fromRGB(38, 29, 57)
+                            pBtn.BackgroundColor3 = Color3.fromRGB(38, 29, 57)
                             pBtn.TextColor3 = Color3.fromRGB(235, 235, 235)
                             pBtn.Text = "Target: " .. ptName
                             pBtn.Font = Enum.Font.GothamBold
@@ -749,14 +738,11 @@ function Library:Load()
                             pBtn.MouseButton1Click:Connect(function()
                                 targetPartOption = ptName
                                 togButton.Text = "Aim Part: " .. ptName .. " ▼"
-                                notify("Aimbot Part set to: " .. ptName)
+                                notify("Aim Part: " .. ptName)
                                 partFrame.Visible = false
                             end)
                         end
-
-                        togButton.MouseButton1Click:Connect(function()
-                            partFrame.Visible = not partFrame.Visible
-                        end)
+                        togButton.MouseButton1Click:Connect(function() partFrame.Visible = not partFrame.Visible end)
                     elseif tab.IsSmoothDropdown then
                         togButton.BackgroundColor3 = Color3.fromRGB(110, 50, 180)
                         togButton.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -779,15 +765,10 @@ function Library:Load()
                         smoothLayout.Padding = UDim.new(0, 4)
                         smoothLayout.Parent = smoothFrame
 
-                        local modes = {
-                            {Name = "Hard (Instant)", Val = 0},
-                            {Name = "Medium (Balanced)", Val = 0.3},
-                            {Name = "Low (Smooth)", Val = 0.6}
-                        }
-                        for _, mode in ipairs(modes) do
+                        for _, mode in ipairs({{Name = "Hard (Instant)", Val = 0}, {Name = "Medium (Balanced)", Val = 0.3}, {Name = "Low (Smooth)", Val = 0.6}}) do
                             local mBtn = Instance.new("TextButton")
                             mBtn.Size = UDim2.new(1, 0, 0, 28)
-                            mBtn.BackgroundColor3 = (aimbotSmoothing == mode.Val) and Color3.fromRGB(93, 205, 151) or Color3.fromRGB(38, 29, 57)
+                            mBtn.BackgroundColor3 = Color3.fromRGB(38, 29, 57)
                             mBtn.TextColor3 = Color3.fromRGB(235, 235, 235)
                             mBtn.Text = mode.Name
                             mBtn.Font = Enum.Font.GothamBold
@@ -801,14 +782,11 @@ function Library:Load()
                             mBtn.MouseButton1Click:Connect(function()
                                 aimbotSmoothing = mode.Val
                                 togButton.Text = "Aim Mode: " .. mode.Name .. " ▼"
-                                notify("Aimbot Mode: " .. mode.Name)
+                                notify("Mode: " .. mode.Name)
                                 smoothFrame.Visible = false
                             end)
                         end
-
-                        togButton.MouseButton1Click:Connect(function()
-                            smoothFrame.Visible = not smoothFrame.Visible
-                        end)
+                        togButton.MouseButton1Click:Connect(function() smoothFrame.Visible = not smoothFrame.Visible end)
                     elseif tab.IsScrollingDropdown then
                         togButton.BackgroundColor3 = Color3.fromRGB(80, 40, 160)
                         togButton.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -819,7 +797,7 @@ function Library:Load()
                         dropFrame.Size = UDim2.new(1, 0, 0, 180)
                         dropFrame.BackgroundColor3 = Color3.fromRGB(27, 21, 42)
                         dropFrame.BorderSizePixel = 0
-                        dropFrame.Visible = true
+                        dropFrame.Visible = false
                         dropFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
                         dropFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
                         dropFrame.ScrollBarThickness = 3
@@ -837,11 +815,8 @@ function Library:Load()
                         
                         local function refreshPlayerList()
                             for _, child in ipairs(dropFrame:GetChildren()) do
-                                if child:IsA("TextButton") then
-                                    child:Destroy()
-                                end
+                                if child:IsA("TextButton") then child:Destroy() end
                             end
-                            
                             local refreshBtn = Instance.new("TextButton")
                             refreshBtn.Size = UDim2.new(1, 0, 0, 28)
                             refreshBtn.BackgroundColor3 = Color3.fromRGB(0, 110, 180)
@@ -855,16 +830,13 @@ function Library:Load()
                             refCorner.CornerRadius = UDim.new(0, 4)
                             refCorner.Parent = refreshBtn
                             
-                            refreshBtn.MouseButton1Click:Connect(function()
-                                refreshPlayerList()
-                                notify("Player list refreshed!")
-                            end)
+                            refreshBtn.MouseButton1Click:Connect(function() refreshPlayerList() notify("List Refreshed!") end)
                             
                             for _, p in ipairs(Players:GetPlayers()) do
                                 if p ~= player then
                                     local pBtn = Instance.new("TextButton")
                                     pBtn.Size = UDim2.new(1, 0, 0, 28)
-                                    pBtn.BackgroundColor3 = (selectedTargetPlayer == p) and Color3.fromRGB(93, 205, 151) or Color3.fromRGB(38, 29, 57)
+                                    pBtn.BackgroundColor3 = Color3.fromRGB(38, 29, 57)
                                     pBtn.TextColor3 = Color3.fromRGB(235, 235, 235)
                                     pBtn.Text = p.DisplayName .. " (@" .. p.Name .. ")"
                                     pBtn.Font = Enum.Font.GothamBold
@@ -879,27 +851,15 @@ function Library:Load()
                                         selectedTargetPlayer = p
                                         togButton.Text = "Target: " .. p.Name .. " ▼"
                                         refreshPlayerList()
-                                        notify("Target selected: " .. p.Name)
+                                        notify("Target: " .. p.Name)
                                     end)
                                 end
                             end
                         end
-                        
                         refreshPlayerList()
-                        Players.PlayerAdded:Connect(refreshPlayerList)
-                        Players.PlayerRemoving:Connect(function(leavingPlayer)
-                            if selectedTargetPlayer == leavingPlayer then
-                                selectedTargetPlayer = nil
-                                togButton.Text = "Target: [Select Player] ▼"
-                            end
-                            refreshPlayerList()
-                        end)
-                        
                         togButton.MouseButton1Click:Connect(function()
                             dropFrame.Visible = not dropFrame.Visible
-                            if dropFrame.Visible then
-                                refreshPlayerList()
-                            end
+                            if dropFrame.Visible then refreshPlayerList() end
                         end)
                     else
                         togButton.BackgroundColor3 = tab.State and Color3.fromRGB(93, 205, 151) or Color3.fromRGB(38, 29, 57)
@@ -908,7 +868,7 @@ function Library:Load()
                         togButton.TextXAlignment = Enum.TextXAlignment.Left
                     end
                     
-                    if not tab.IsSpeedInput and not tab.IsFovInput and not tab.IsMaxDistInput and not tab.IsScrollingDropdown and not tab.IsPartDropdown and not tab.IsSmoothDropdown and not tab.IsButton then
+                    if not tab.IsSpeedInput and not tab.IsFovInput and not tab.IsMaxDistInput and not tab.IsScrollingDropdown and not tab.IsPartDropdown and not tab.IsSmoothDropdown and not tab.IsThemeDropdown and not tab.IsButton then
                         local pad = Instance.new("UIPadding")
                         pad.PaddingLeft = UDim.new(0, 6)
                         pad.Parent = togButton
@@ -925,7 +885,7 @@ function Library:Load()
                     corner.Parent = togButton
                     
                     local currentState = tab.State
-                    if not tab.IsButton and not tab.IsScrollingDropdown and not tab.IsPartDropdown and not tab.IsSmoothDropdown and not tab.IsSpeedInput and not tab.IsFovInput and not tab.IsMaxDistInput then
+                    if not tab.IsButton and not tab.IsScrollingDropdown and not tab.IsPartDropdown and not tab.IsSmoothDropdown and not tab.IsThemeDropdown and not tab.IsSpeedInput and not tab.IsFovInput and not tab.IsMaxDistInput then
                         togButton.MouseButton1Click:Connect(function()
                             currentState = not currentState
                             togButton.Text = "  " .. tab.Name .. " : " .. (currentState and "ON" or "OFF")
@@ -962,7 +922,6 @@ function Library:Load()
             categoryButtons[1].TextColor3 = Color3.fromRGB(245, 240, 255)
         end
         
-        --// Minimize Logic
         local minimized = false
         local previousSize = mainFrame.Size
         minBtn.MouseButton1Click:Connect(function()
@@ -985,61 +944,25 @@ function Library:Load()
     end
 end
 
-local Window = Library:CreateWindow("kyuzxc simple mod menu [ipad]")
+local Window = Library:CreateWindow("kyuzxc simple mod menu [ipad v3]")
 
 --// Category 1: Movement
 local catMovement = Window:CreateCategory("Movement")
-catMovement:CreateTab("god mode (anti-touch)", {enabled = false}, function(tog) 
+catMovement:CreateTab("god mode", {enabled = false}, function(tog) 
     godmodeenabled = tog
-    if player.Character then
-        setGodModeState(player.Character, tog)
-    end
-    notify("God Mode (Anti-Killbrick): " .. (tog and "ON" or "OFF"))
+    if player.Character then setGodModeState(player.Character, tog) end
+    notify("God Mode: " .. (tog and "ON" or "OFF"))
 end)
-catMovement:CreateTab("noclip", {enabled = false}, function(tog) 
-    noclipped = tog 
-    if not tog and player.Character then
-        for _, part in ipairs(player.Character:GetDescendants()) do
-            if part:IsA("BasePart") then part.CanCollide = true end
-        end
-    end
-end)
-catMovement:CreateTab("inf jump", {enabled = false}, function(tog) 
-    infjumpenabled = tog 
-end) 
-catMovement:CreateTab("speed hack", {enabled = false}, function(tog) 
-    speedenabled = tog 
-    if not tog and player.Character then
-        local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
-        if humanoid then humanoid.WalkSpeed = 16 end
-    end
-end)
+catMovement:CreateTab("noclip", {enabled = false}, function(tog) noclipped = tog end)
+catMovement:CreateTab("inf jump", {enabled = false}, function(tog) infjumpenabled = tog end) 
+catMovement:CreateTab("speed hack", {enabled = false}, function(tog) speedenabled = tog end)
 catMovement:CreateTab("speed value", {isSpeedInput = true})
-catMovement:CreateTab("jump power hack", {enabled = false}, function(tog)
-    jumppowerenabled = tog
-    if not tog and player.Character then
-        local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
-        if humanoid then humanoid.JumpPower = 50 end
-    end
-end)
-catMovement:CreateTab("jump power", {isSlider = true, min = 50, max = 300, default = 100, step = 5}, function(val)
-    customJumpPower = val
-end)
-catMovement:CreateTab("low gravity", {enabled = false}, function(tog)
-    gravityenabled = tog
-    if not tog then
-        workspace.Gravity = defaultGravity
-    end
-end)
-catMovement:CreateTab("gravity value", {isSlider = true, min = 10, max = 196, default = 80, step = 2}, function(val)
-    customGravity = val
-end)
-catMovement:CreateTab("fly (ipad + pc)", {enabled = false}, function(tog) 
-    flyenabled = tog 
-end)
-catMovement:CreateTab("fly speed", {isSlider = true, min = 20, max = 250, default = 60, step = 5}, function(val)
-    customFlySpeed = val
-end)
+catMovement:CreateTab("jump power hack", {enabled = false}, function(tog) jumppowerenabled = tog end)
+catMovement:CreateTab("jump power", {isSlider = true, min = 50, max = 300, default = 100, step = 5}, function(val) customJumpPower = val end)
+catMovement:CreateTab("low gravity", {enabled = false}, function(tog) gravityenabled = tog if not tog then workspace.Gravity = defaultGravity end end)
+catMovement:CreateTab("gravity value", {isSlider = true, min = 10, max = 196, default = 80, step = 2}, function(val) customGravity = val end)
+catMovement:CreateTab("fly (ipad + pc)", {enabled = false}, function(tog) flyenabled = tog end)
+catMovement:CreateTab("fly speed", {isSlider = true, min = 20, max = 250, default = 60, step = 5}, function(val) customFlySpeed = val end)
 
 --// Category 2: Visuals
 local catVisuals = Window:CreateCategory("Visuals")
@@ -1047,155 +970,89 @@ catVisuals:CreateTab("esp team (green)", {enabled = true}, function(tog) showtea
 catVisuals:CreateTab("esp enemy (red)", {enabled = true}, function(tog) showenemy = tog end)
 catVisuals:CreateTab("esp names", {enabled = true}, function(tog) espenabled = tog end)
 catVisuals:CreateTab("esp boxes", {enabled = true}, function(tog) boxenabled = tog end)
+catVisuals:CreateTab("esp health bar", {enabled = true}, function(tog) healthbarenabled = tog end)
 catVisuals:CreateTab("esp skeleton", {enabled = true}, function(tog) skeletonenabled = tog end)
 catVisuals:CreateTab("esp tracers", {enabled = true}, function(tog) tracerenabled = tog end)
 catVisuals:CreateTab("distance tags", {enabled = true}, function(tog) showdist = tog end)
 catVisuals:CreateTab("max esp distance", {isMaxDistInput = true})
 catVisuals:CreateTab("center crosshair", {enabled = false}, function(tog) crosshairEnabled = tog end)
-catVisuals:CreateTab("fullbright (no fog)", {enabled = false}, function(tog)
+catVisuals:CreateTab("fullbright", {enabled = false}, function(tog)
     fullbrightEnabled = tog
     if not tog then
-        Lighting.Brightness = defaultLighting.Brightness
-        Lighting.ClockTime = defaultLighting.ClockTime
-        Lighting.FogEnd = defaultLighting.FogEnd
-        Lighting.GlobalShadows = defaultLighting.GlobalShadows
-        Lighting.Ambient = defaultLighting.Ambient
+        Lighting.Brightness = 1
+        Lighting.ClockTime = 14
+        Lighting.FogEnd = 100000
     end
 end)
-catVisuals:CreateTab("fps booster (anti-lag)", {isButton = true}, function()
-    applyFpsBoost()
-end)
+catVisuals:CreateTab("fps booster", {isButton = true}, function() applyFpsBoost() end)
 
---// Category 3: Combat (Aimbot, Hitbox & FOV)
+--// Category 3: Combat
 local catCombat = Window:CreateCategory("Combat")
 catCombat:CreateTab("aimbot button", {enabled = false}, function(tog) 
     aimbotenabled = tog 
     aimToggleButton.Visible = tog
-    if not tog then
-        aimbotactive = false
-        aimToggleButton.BackgroundColor3 = Color3.fromRGB(38, 29, 57)
-        aimToggleButton.TextColor3 = Color3.fromRGB(255, 75, 75)
-        aimBtnStroke.Color = Color3.fromRGB(255, 75, 75)
-        aimToggleButton.Text = "AIM: OFF"
-    end
+    if not tog then aimbotactive = false aimToggleButton.Text = "AIM: OFF" end
 end)
 catCombat:CreateTab("aim part", {isPartDropdown = true})
 catCombat:CreateTab("aim smoothness", {isSmoothDropdown = true})
 catCombat:CreateTab("fov circle", {enabled = false}, function(tog) fovcircleenabled = tog end)
 catCombat:CreateTab("fov value", {isFovInput = true})
-catCombat:CreateTab("hitbox expander", {enabled = false}, function(tog)
-    hitboxenabled = tog
-    if not tog then
-        resetEnemyHitboxes()
-    end
-end)
-catCombat:CreateTab("hitbox size", {isSlider = true, min = 2, max = 35, default = 12, step = 1}, function(val)
-    hitboxSize = val
-end)
+catCombat:CreateTab("hitbox expander", {enabled = false}, function(tog) hitboxenabled = tog if not tog then resetEnemyHitboxes() end end)
+catCombat:CreateTab("hitbox size", {isSlider = true, min = 2, max = 35, default = 12, step = 1}, function(val) hitboxSize = val end)
 
---// Category 4: Customizable POV & Camera
+--// Category 4: POV & Cam
 local catPOV = Window:CreateCategory("POV & Cam")
-catPOV:CreateTab("custom pov & fov", {enabled = false}, function(tog)
-    povenabled = tog
-    if not tog then
-        if workspace.CurrentCamera then
-            workspace.CurrentCamera.FieldOfView = 70
-        end
-        local char = player.Character
-        local hum = char and char:FindFirstChildOfClass("Humanoid")
-        if hum then
-            hum.CameraOffset = Vector3.zero
-        end
-    end
-end)
-catPOV:CreateTab("camera fov (angle)", {isSlider = true, min = 40, max = 120, default = 90, step = 1, resetGroup = "POV"}, function(val)
-    cameraFovValue = val
-end)
-catPOV:CreateTab("pov shoulder (x)", {isSlider = true, min = -10, max = 10, default = 0, step = 0.5, resetGroup = "POV"}, function(val)
-    povOffsetX = val
-end)
-catPOV:CreateTab("pov height (y)", {isSlider = true, min = -10, max = 10, default = 0, step = 0.5, resetGroup = "POV"}, function(val)
-    povOffsetY = val
-end)
-catPOV:CreateTab("pov distance (z)", {isSlider = true, min = -15, max = 15, default = 0, step = 0.5, resetGroup = "POV"}, function(val)
-    povOffsetZ = val
-end)
-catPOV:CreateTab("unlock max zoom", {enabled = false}, function(tog)
-    unlockZoomEnabled = tog
-    if not tog then
-        player.CameraMaxZoomDistance = defaultMaxZoom
-    end
-end)
-catPOV:CreateTab("ipad shift-lock", {enabled = false}, function(tog)
-    shiftlockEnabled = tog
-    local char = player.Character
-    local hum = char and char:FindFirstChildOfClass("Humanoid")
-    if hum and not tog then
-        hum.AutoRotate = true
-    end
-end)
+catPOV:CreateTab("custom pov & fov", {enabled = false}, function(tog) povenabled = tog end)
+catPOV:CreateTab("camera fov", {isSlider = true, min = 40, max = 120, default = 90, step = 1, resetGroup = "POV"}, function(val) cameraFovValue = val end)
+catPOV:CreateTab("pov shoulder (x)", {isSlider = true, min = -10, max = 10, default = 0, step = 0.5, resetGroup = "POV"}, function(val) povOffsetX = val end)
+catPOV:CreateTab("pov height (y)", {isSlider = true, min = -10, max = 10, default = 0, step = 0.5, resetGroup = "POV"}, function(val) povOffsetY = val end)
+catPOV:CreateTab("pov distance (z)", {isSlider = true, min = -15, max = 15, default = 0, step = 0.5, resetGroup = "POV"}, function(val) povOffsetZ = val end)
+catPOV:CreateTab("unlock max zoom", {enabled = false}, function(tog) unlockZoomEnabled = tog end)
+catPOV:CreateTab("ipad shift-lock", {enabled = false}, function(tog) shiftlockEnabled = tog end)
 catPOV:CreateTab("reset pov defaults", {isButton = true}, function()
-    for _, resetFn in ipairs(sliderResetCallbacks) do
-        resetFn()
-    end
-    if not povenabled and workspace.CurrentCamera then
-        workspace.CurrentCamera.FieldOfView = 70
-    end
-    notify("POV sliders reset to default!")
+    for _, resetFn in ipairs(sliderResetCallbacks) do resetFn() end
+    notify("POV reset!")
 end)
 
---// Category 5: Teleport & Target
+--// Category 5: Teleport
 local catTeleport = Window:CreateCategory("Teleport")
 catTeleport:CreateTab("select player", {isScrollingDropdown = true})
 catTeleport:CreateTab("teleport to target [T]", {isButton = true}, function() teleportToTarget() end)
-catTeleport:CreateTab("spectate target", {enabled = false}, function(tog)
-    spectateEnabled = tog
-    if not tog and player.Character then
-        local myHum = player.Character:FindFirstChildOfClass("Humanoid")
-        if myHum and workspace.CurrentCamera then
-            workspace.CurrentCamera.CameraSubject = myHum
-        end
-    end
-end)
+catTeleport:CreateTab("spectate target", {enabled = false}, function(tog) spectateEnabled = tog end)
 
---// Category 6: Misc & Server
-local catMisc = Window:CreateCategory("Misc")
-catMisc:CreateTab("spinbot (anti-hit)", {enabled = false}, function(tog)
-    spinbotenabled = tog
-end)
-catMisc:CreateTab("spin speed", {isSlider = true, min = 10, max = 100, default = 35, step = 5}, function(val)
-    spinSpeed = val
-end)
-catMisc:CreateTab("anti-afk (no idle kick)", {enabled = true}, function(tog)
-    antiafkenabled = tog
-end)
-catMisc:CreateTab("rejoin current server", {isButton = true}, function()
-    notify("Rejoining current server...")
-    TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, player)
-end)
-catMisc:CreateTab("server hop (new server)", {isButton = true}, function()
-    serverHop()
+--// Category 6: Settings & Theme
+local catSettings = Window:CreateCategory("Settings")
+catSettings:CreateTab("menu accent theme", {IsThemeDropdown = true})
+catSettings:CreateTab("menu watermark", {enabled = true}, function(tog) watermarkEnabled = tog watermarkGui.Enabled = tog end)
+catSettings:CreateTab("spinbot", {enabled = false}, function(tog) spinbotenabled = tog end)
+catSettings:CreateTab("spin speed", {isSlider = true, min = 10, max = 100, default = 35, step = 5}, function(val) spinSpeed = val end)
+catSettings:CreateTab("anti-afk", {enabled = true}, function(tog) antiafkenabled = tog end)
+catSettings:CreateTab("rejoin server", {isButton = true}, function() TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, player) end)
+catSettings:CreateTab("server hop", {isButton = true}, function()
+    notify("Searching server...")
+    pcall(function()
+        local result = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"))
+        for _, srv in ipairs(result.data) do
+            if srv.playing < srv.maxPlayers and srv.id ~= game.JobId then
+                TeleportService:TeleportToPlaceInstance(game.PlaceId, srv.id, player)
+                return
+            end
+        end
+    end)
 end)
 
 Library:Load()
-notify("kyuzxc menu v2.5 loaded successfully!")
+notify("Kyuzxc Menu v3.0 Loaded!")
 
 UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
-    if input.KeyCode == Enum.KeyCode.T then
-        teleportToTarget()
-    end
+    if input.KeyCode == Enum.KeyCode.T then teleportToTarget() end
 end)
 
 UserInputService.JumpRequest:Connect(function()
-    if infjumpenabled then
-        local char = player.Character
-        if char then
-            local humanoid = char:FindFirstChildOfClass("Humanoid")
-            if humanoid then
-                humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-            end
-        end
+    if infjumpenabled and player.Character then
+        local hum = player.Character:FindFirstChildOfClass("Humanoid")
+        if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
     end
 end)
 
@@ -1206,11 +1063,24 @@ local function isPlayerTeammate(p)
     return false
 end
 
-RunService.Stepped:Connect(function()
-    if gravityenabled then
-        workspace.Gravity = customGravity
+--// Render & Stepped Loops
+local lastTick = tick()
+local frameCount = 0
+local currentFps = 60
+
+RunService.RenderStepped:Connect(function()
+    -- Calculate FPS for watermark
+    frameCount = frameCount + 1
+    if tick() - lastTick >= 1 then
+        currentFps = frameCount
+        frameCount = 0
+        lastTick = tick()
+        if watermarkEnabled then
+            wmText.Text = "Kyuzxc Menu | FPS: " .. currentFps
+        end
     end
 
+    if gravityenabled then workspace.Gravity = customGravity end
     local char = player.Character
     if char then
         local humanoid = char:FindFirstChildOfClass("Humanoid")
@@ -1224,22 +1094,16 @@ RunService.Stepped:Connect(function()
 
         if godmodeenabled then
             for _, part in ipairs(char:GetDescendants()) do
-                if part:IsA("BasePart") and part.CanTouch then
-                    part.CanTouch = false
-                end
+                if part:IsA("BasePart") and part.CanTouch then part.CanTouch = false end
             end
         end
         
         if humanoid then
-            if speedenabled then
-                humanoid.WalkSpeed = customWalkSpeed
-            end
-
+            if speedenabled then humanoid.WalkSpeed = customWalkSpeed end
             if jumppowerenabled then
                 humanoid.UseJumpPower = true
                 humanoid.JumpPower = customJumpPower
             end
-            
             if godmodeenabled then
                 humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
                 if humanoid.Health > 0 and humanoid.Health < humanoid.MaxHealth then
@@ -1261,7 +1125,7 @@ RunService.Stepped:Connect(function()
                     bv = Instance.new("BodyVelocity")
                     bv.Name = "KyuzxcFlyBodyVelocity"
                     bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-                    bv.Velocity = Vector3.new(0, 0, 0)
+                    bv.Velocity = Vector3.zero
                     bv.Parent = hrp
                 end
                 if not bg then
@@ -1271,24 +1135,12 @@ RunService.Stepped:Connect(function()
                     bg.CFrame = Camera.CFrame
                     bg.Parent = hrp
                 end
-                
                 bg.CFrame = Camera.CFrame
-                local moveDir = Vector3.new(0, 0, 0)
-                
+                local moveDir = Vector3.zero
                 if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + Camera.CFrame.LookVector end
                 if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - Camera.CFrame.LookVector end
                 if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - Camera.CFrame.RightVector end
                 if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + Camera.CFrame.RightVector end
-                
-                if moveDir.Magnitude == 0 and humanoid and humanoid.MoveDirection.Magnitude > 0 then
-                    local camRight = Camera.CFrame.RightVector
-                    local flatRight = Vector3.new(camRight.X, 0, camRight.Z).Unit
-                    local flatForward = Vector3.new(Camera.CFrame.LookVector.X, 0, Camera.CFrame.LookVector.Z).Unit
-                    local forwardDot = humanoid.MoveDirection:Dot(flatForward)
-                    local rightDot = humanoid.MoveDirection:Dot(flatRight)
-                    moveDir = (Camera.CFrame.LookVector * forwardDot) + (Camera.CFrame.RightVector * rightDot)
-                end
-                
                 bv.Velocity = moveDir * customFlySpeed
             else
                 if bv then bv:Destroy() end
@@ -1316,7 +1168,7 @@ RunService.Stepped:Connect(function()
     end
 end)
 
---// Visuals: Round FOV Circle, Crosshair, Mobile Aimbot & ESP Drawing
+--// Visuals GUI Container
 local visualGui = Instance.new("ScreenGui")
 visualGui.Name = "KyuzxcVisualsGui"
 visualGui.ResetOnSpawn = false
@@ -1343,7 +1195,6 @@ local fovAspect = Instance.new("UIAspectRatioConstraint")
 fovAspect.AspectRatio = 1
 fovAspect.Parent = fovCircle
 
---// Center Crosshair Overlay
 local crosshairHolder = Instance.new("Frame")
 crosshairHolder.Name = "CrosshairHolder"
 crosshairHolder.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -1369,14 +1220,6 @@ chVertical.BackgroundColor3 = accentColor
 chVertical.BorderSizePixel = 0
 chVertical.Parent = crosshairHolder
 
-local chDot = Instance.new("Frame")
-chDot.AnchorPoint = Vector2.new(0.5, 0.5)
-chDot.Position = UDim2.fromScale(0.5, 0.5)
-chDot.Size = UDim2.fromOffset(4, 4)
-chDot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-chDot.BorderSizePixel = 0
-chDot.Parent = crosshairHolder
-
 local function getClosestPlayerInFOV()
     local closestTarget = nil
     local shortestDist = fovradius
@@ -1387,7 +1230,6 @@ local function getClosestPlayerInFOV()
             local char = p.Character
             local targetPart = char and char:FindFirstChild(targetPartOption)
             local humanoid = char and char:FindFirstChildOfClass("Humanoid")
-            
             if targetPart and humanoid and humanoid.Health > 0 then
                 local screenPos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
                 if onScreen then
@@ -1414,6 +1256,8 @@ local function removeESP(p)
             if espCache[p].BoxBottom then espCache[p].BoxBottom:Destroy() end
             if espCache[p].BoxLeft then espCache[p].BoxLeft:Destroy() end
             if espCache[p].BoxRight then espCache[p].BoxRight:Destroy() end
+            if espCache[p].HealthBg then espCache[p].HealthBg:Destroy() end
+            if espCache[p].HealthFill then espCache[p].HealthFill:Destroy() end
             if espCache[p].SkeletonHolder then espCache[p].SkeletonHolder:Destroy() end
         end)
         espCache[p] = nil
@@ -1428,10 +1272,10 @@ local function hideESP(cache)
     if cache.BoxBottom then cache.BoxBottom.Visible = false end
     if cache.BoxLeft then cache.BoxLeft.Visible = false end
     if cache.BoxRight then cache.BoxRight.Visible = false end
+    if cache.HealthBg then cache.HealthBg.Visible = false end
+    if cache.HealthFill then cache.HealthFill.Visible = false end
     if cache.SkeletonLines then
-        for _, line in pairs(cache.SkeletonLines) do
-            line.Visible = false
-        end
+        for _, line in pairs(cache.SkeletonLines) do line.Visible = false end
     end
 end
 
@@ -1464,21 +1308,16 @@ local function updatePlayerESP(p)
     if localHrp then
         local dist = (localHrp.Position - hrp.Position).Magnitude
         if dist > maxEspDistance then
-            if espCache[p] then
-                hideESP(espCache[p])
-            end
+            if espCache[p] then hideESP(espCache[p]) end
             return
         end
     else
-        if espCache[p] then
-            hideESP(espCache[p])
-        end
+        if espCache[p] then hideESP(espCache[p]) end
         return
     end
     
     if not espCache[p] then
         espCache[p] = {}
-        
         local billboard = Instance.new("BillboardGui")
         billboard.Name = "KyuzxcNameTag"
         billboard.Size = UDim2.new(0, 160, 0, 50)
@@ -1503,6 +1342,20 @@ local function updatePlayerESP(p)
         espCache[p].BoxLeft = createLine()
         espCache[p].BoxRight = createLine()
 
+        local hbBg = Instance.new("Frame")
+        hbBg.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+        hbBg.BorderSizePixel = 0
+        hbBg.Visible = false
+        hbBg.Parent = visualGui
+        espCache[p].HealthBg = hbBg
+
+        local hbFill = Instance.new("Frame")
+        hbFill.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+        hbFill.BorderSizePixel = 0
+        hbFill.Visible = false
+        hbFill.Parent = visualGui
+        espCache[p].HealthFill = hbFill
+
         local skFolder = Instance.new("Folder")
         skFolder.Name = "SkeletonFolder"
         skFolder.Parent = visualGui
@@ -1526,7 +1379,6 @@ local function updatePlayerESP(p)
     end
 
     local activeColor = isTeammate and teamColor or enemyColor
-    
     if cache.Billboard and cache.TextLabel then
         cache.Billboard.Enabled = espenabled
         cache.TextLabel.TextColor3 = activeColor
@@ -1551,7 +1403,6 @@ local function updatePlayerESP(p)
                 local screenBottomCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
                 local targetPos = Vector2.new(hrpPos.X, hrpPos.Y)
                 local distance = (targetPos - screenBottomCenter).Magnitude
-                
                 cache.TracerFrame.Size = UDim2.new(0, distance, 0, 1.5)
                 cache.TracerFrame.Position = UDim2.new(0, (screenBottomCenter.X + targetPos.X) / 2, 0, (screenBottomCenter.Y + targetPos.Y) / 2)
                 cache.TracerFrame.Rotation = math.deg(math.atan2(targetPos.Y - screenBottomCenter.Y, targetPos.X - screenBottomCenter.X))
@@ -1563,7 +1414,6 @@ local function updatePlayerESP(p)
             cache.BoxBottom.Visible = boxenabled
             cache.BoxLeft.Visible = boxenabled
             cache.BoxRight.Visible = boxenabled
-
             cache.BoxTop.BackgroundColor3 = activeColor
             cache.BoxBottom.BackgroundColor3 = activeColor
             cache.BoxLeft.BackgroundColor3 = activeColor
@@ -1572,7 +1422,6 @@ local function updatePlayerESP(p)
             if boxenabled then
                 local Victim_Head = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 0.5, 0))
                 local Victim_Legs = Camera:WorldToViewportPoint(hrp.Position - Vector3.new(0, 3, 0))
-                
                 local boxSizeX = 2000 / hrpPos.Z
                 local boxSizeY = math.abs(Victim_Legs.Y - Victim_Head.Y)
                 local centerX = hrpPos.X
@@ -1580,65 +1429,28 @@ local function updatePlayerESP(p)
 
                 cache.BoxTop.Size = UDim2.new(0, boxSizeX, 0, 1.5)
                 cache.BoxTop.Position = UDim2.new(0, centerX, 0, centerY - (boxSizeY / 2))
-
                 cache.BoxBottom.Size = UDim2.new(0, boxSizeX, 0, 1.5)
                 cache.BoxBottom.Position = UDim2.new(0, centerX, 0, centerY + (boxSizeY / 2))
-
                 cache.BoxLeft.Size = UDim2.new(0, 1.5, 0, boxSizeY)
                 cache.BoxLeft.Position = UDim2.new(0, centerX - (boxSizeX / 2), 0, centerY)
-
                 cache.BoxRight.Size = UDim2.new(0, 1.5, 0, boxSizeY)
                 cache.BoxRight.Position = UDim2.new(0, centerX + (boxSizeX / 2), 0, centerY)
-            end
-        end
 
-        local skel = cache.SkeletonLines
-        if skel then
-            local torsoPart = char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
-            local leftHandPart = char:FindFirstChild("LeftHand") or char:FindFirstChild("Left Arm")
-            local rightHandPart = char:FindFirstChild("RightHand") or char:FindFirstChild("Right Arm")
-            local leftFootPart = char:FindFirstChild("LeftFoot") or char:FindFirstChild("Left Leg")
-            local rightFootPart = char:FindFirstChild("RightFoot") or char:FindFirstChild("Right Leg")
-
-            if skeletonenabled and head and torsoPart then
-                local headV, hValid = Camera:WorldToViewportPoint(head.Position)
-                local torsoV, tValid = Camera:WorldToViewportPoint(torsoPart.Position)
-                
-                if hValid and tValid then
-                    local p1, p2 = Vector2.new(headV.X, headV.Y), Vector2.new(torsoV.X, torsoV.Y)
-                    local dist = (p2 - p1).Magnitude
-                    skel.Head_Neck.BackgroundColor3 = activeColor
-                    skel.Head_Neck.Size = UDim2.new(0, dist, 0, 1.5)
-                    skel.Head_Neck.Position = UDim2.new(0, (p1.X + p2.X) / 2, 0, (p1.Y + p2.Y) / 2)
-                    skel.Head_Neck.Rotation = math.deg(math.atan2(p2.Y - p1.Y, p2.X - p1.X))
-                    skel.Head_Neck.Visible = true
-                else
-                    skel.Head_Neck.Visible = false
-                end
-
-                local function drawBone(boneKey, part)
-                    if part and tValid then
-                        local partV, pValid = Camera:WorldToViewportPoint(part.Position)
-                        if pValid then
-                            local p1, p2 = Vector2.new(torsoV.X, torsoV.Y), Vector2.new(partV.X, partV.Y)
-                            local dist = (p2 - p1).Magnitude
-                            skel[boneKey].BackgroundColor3 = activeColor
-                            skel[boneKey].Size = UDim2.new(0, dist, 0, 1.5)
-                            skel[boneKey].Position = UDim2.new(0, (p1.X + p2.X) / 2, 0, (p1.Y + p2.Y) / 2)
-                            skel[boneKey].Rotation = math.deg(math.atan2(p2.Y - p1.Y, p2.X - p1.X))
-                            skel[boneKey].Visible = true
-                            return
-                        end
+                -- Health Bar Render
+                if cache.HealthBg and cache.HealthFill then
+                    cache.HealthBg.Visible = healthbarenabled
+                    cache.HealthFill.Visible = healthbarenabled
+                    if healthbarenabled then
+                        local hpPercent = math.clamp(humanoid.Health / humanoid.MaxHealth, 0, 1)
+                        local hbHeight = boxSizeY * hpPercent
+                        cache.HealthBg.Size = UDim2.new(0, 3, 0, boxSizeY)
+                        cache.HealthBg.Position = UDim2.new(0, centerX - (boxSizeX / 2) - 6, 0, centerY - (boxSizeY / 2))
+                        
+                        cache.HealthFill.Size = UDim2.new(0, 2, 0, hbHeight)
+                        cache.HealthFill.Position = UDim2.new(0, centerX - (boxSizeX / 2) - 5, 0, centerY - (boxSizeY / 2) + (boxSizeY - hbHeight))
+                        cache.HealthFill.BackgroundColor3 = Color3.fromRGB(255 * (1 - hpPercent), 255 * hpPercent, 0)
                     end
-                    skel[boneKey].Visible = false
                 end
-
-                drawBone("Torso_LHand", leftHandPart)
-                drawBone("Torso_RHand", rightHandPart)
-                drawBone("Torso_LFoot", leftFootPart)
-                drawBone("Torso_RFoot", rightFootPart)
-            else
-                for _, line in pairs(skel) do line.Visible = false end
             end
         end
     else
@@ -1652,14 +1464,9 @@ RunService.RenderStepped:Connect(function()
     local myHum = myChar and myChar:FindFirstChildOfClass("Humanoid")
     local myHrp = myChar and myChar:FindFirstChild("HumanoidRootPart")
 
-    --// 1. Custom POV & Camera Offset Enforcement
     if povenabled then
-        if Camera and Camera.FieldOfView ~= cameraFovValue then
-            Camera.FieldOfView = cameraFovValue
-        end
-        if myHum then
-            myHum.CameraOffset = Vector3.new(povOffsetX, povOffsetY, povOffsetZ)
-        end
+        if Camera and Camera.FieldOfView ~= cameraFovValue then Camera.FieldOfView = cameraFovValue end
+        if myHum then myHum.CameraOffset = Vector3.new(povOffsetX, povOffsetY, povOffsetZ) end
     end
 
     if unlockZoomEnabled then
@@ -1667,7 +1474,6 @@ RunService.RenderStepped:Connect(function()
         player.CameraMinZoomDistance = 0.5
     end
 
-    --// 2. iPad Shift-Lock (Character faces Camera horizontal direction)
     if shiftlockEnabled and myHum and myHrp and Camera then
         myHum.AutoRotate = false
         local lookVec = Camera.CFrame.LookVector
@@ -1677,19 +1483,15 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    --// 3. Spectate Selected Target
     if spectateEnabled and Camera then
         if selectedTargetPlayer and selectedTargetPlayer.Character then
             local targetHum = selectedTargetPlayer.Character:FindFirstChildOfClass("Humanoid")
-            if targetHum then
-                Camera.CameraSubject = targetHum
-            end
+            if targetHum then Camera.CameraSubject = targetHum end
         elseif myHum then
             Camera.CameraSubject = myHum
         end
     end
 
-    --// 4. Fullbright Enforcement
     if fullbrightEnabled then
         Lighting.Brightness = 2
         Lighting.ClockTime = 14
@@ -1698,7 +1500,6 @@ RunService.RenderStepped:Connect(function()
         Lighting.Ambient = Color3.fromRGB(178, 178, 178)
     end
 
-    --// 5. Crosshair & FOV Circle Updates
     crosshairHolder.Visible = crosshairEnabled
     fovCircle.Visible = fovcircleenabled
     if fovcircleenabled and Camera then
@@ -1706,7 +1507,6 @@ RunService.RenderStepped:Connect(function()
         fovCircle.Position = UDim2.new(0, Camera.ViewportSize.X / 2, 0, Camera.ViewportSize.Y / 2)
     end
 
-    --// 6. Aimbot Update
     if aimbotenabled and aimbotactive and Camera then
         local targetPart = getClosestPlayerInFOV()
         if targetPart then
@@ -1720,10 +1520,7 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    --// 7. Player ESP Update
     for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= player then
-            updatePlayerESP(p)
-        end
+        if p ~= player then updatePlayerESP(p) end
     end
 end)
